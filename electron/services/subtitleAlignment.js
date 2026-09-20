@@ -1,0 +1,680 @@
+/**
+ * 字幕对齐核心逻辑 — 完整移植自 core/subtitle_alignment.py
+ * 使用 diff-match-patch 实现转录文本与原文本的精确对齐
+ */
+const DiffMatchPatch = require('diff-match-patch');
+const { wordSplitBy, writeToPath, replaceSymbolsToOne } = require('./subtitleUtils');
+const { SrtsToFcpxml } = require('./fcpxml');
+
+// ==================== 辅助函数 ====================
+
+/** 格式化秒数为 SRT 时间码 HH:MM:SS,mmm */
+function formatTime(seconds) {
+    if (seconds < 0) seconds = 0;
+    const millis = Math.round((seconds % 1) * 1000);
+    let totalSec = Math.floor(seconds);
+    let minutes = Math.floor(totalSec / 60);
+    totalSec = totalSec % 60;
+    const hours = Math.floor(minutes / 60);
+    minutes = minutes % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(totalSec).padStart(2, '0')},${String(millis).padStart(3, '0')}`;
+}
+
+/** 清理文本 — 替换空白为空格，标点替换为统一符号 */
+function cleanText(text) {
+    let cleaned = text.trim().replace(/\n/g, '').replace(/\r/g, '');
+    cleaned = cleaned.replace(/\s+/g, wordSplitBy.en);
+    cleaned = cleaned.toLowerCase();
+    cleaned = replaceSymbolsToOne(cleaned);
+    return cleaned;
+}
+
+/**
+ * 旧缓存中可能保存了 Deepgram 的裸词时间线（word），但全文使用的是带标点的
+ * transcript。对齐器按字符把时间线映射回全文，二者少一个标点都会报长度不一致。
+ * 当两套词序完全一致时，用全文的对应词补回标点；词数或词序有任何差异则不猜测。
+ */
+function repairTimelinePunctuation(generationSubtitleArray, generationSubtitleText) {
+    if (!Array.isArray(generationSubtitleArray) || !String(generationSubtitleText || '').trim()) return false;
+    const timelineWords = generationSubtitleArray.flatMap(sentence => Array.isArray(sentence?.words) ? sentence.words : []);
+    const transcriptWords = String(generationSubtitleText).trim().match(/\S+/g) || [];
+    if (!timelineWords.length || timelineWords.length !== transcriptWords.length) return false;
+
+    const comparable = value => String(value || '')
+        .normalize('NFKC')
+        .toLocaleLowerCase()
+        .replace(/[\s\p{P}\p{S}_]+/gu, '');
+    if (!timelineWords.every((word, index) => comparable(word?.word) === comparable(transcriptWords[index]))) return false;
+
+    let changed = false;
+    timelineWords.forEach((word, index) => {
+        const repaired = transcriptWords[index];
+        if (word.word !== repaired) {
+            word.word = repaired;
+            changed = true;
+        }
+    });
+    return changed;
+}
+
+/** 以逐词时间线重建文本。时间轴映射必须以此文本为基准，不能依赖服务返回的摘要全文。 */
+function buildTimelineText(generationSubtitleArray) {
+    if (!Array.isArray(generationSubtitleArray)) return '';
+    const words = generationSubtitleArray.flatMap(sentence => Array.isArray(sentence?.words) ? sentence.words : []);
+    return words.map(word => String(word?.word || '').trim()).filter(Boolean).join(wordSplitBy.en);
+}
+
+// ==================== 核心对齐算法 ====================
+
+/**
+ * 处理差异并计算音频位置
+ * 完整移植自 process_diffs_with_audio_positions_strong
+ */
+function processDiffsWithAudioPositionsStrong(params) {
+    const {
+        diffs,
+        source_text_with_no_info,
+        translate_text_dict,
+        generation_subtitle_text,
+        source_text_with_info,
+        generation_subtitle_array,
+        title,
+        directory,
+        language,
+        gen_merge_srt,
+        source_up_order,
+        export_fcpxml,
+        seamless_fcpxml,
+        source_srt_path,
+        fcpxml_path,
+    } = params;
+
+    let mergeText = '';
+    let sourceText = '';
+    let generateText = '';
+    const sourceStore = {};
+    const generateStore = {};
+    const allstrings = {};
+
+    function getSourceStore(index) {
+        if (!sourceStore[index]) sourceStore[index] = {};
+        return sourceStore[index];
+    }
+    function getGenerateStore(index) {
+        if (!generateStore[index]) generateStore[index] = {};
+        return generateStore[index];
+    }
+    function getAllstrings(index) {
+        if (!allstrings[index]) allstrings[index] = {};
+        return allstrings[index];
+    }
+
+    // ---- 生成对应关系 ----
+    for (let i = 0; i < diffs.length; i++) {
+        const [op, content] = diffs[i];
+        const lengthSource = sourceText.length;
+        const lengthGenerate = generateText.length;
+        const lengthAll = mergeText.length;
+        const lengthContent = content.length;
+
+        if (op === 1) {
+            // DIFF_INSERT: 原文本有、生成文本没有
+            for (let number = 0; number < lengthContent; number++) {
+                const indexAll = number + lengthAll;
+                const indexSource = lengthSource + number;
+                const source = getSourceStore(indexSource);
+                const all = getAllstrings(indexAll);
+                source.index_in_all = indexAll;
+                all.index = indexAll;
+                all.source_index = indexSource;
+                const g = mergeText + content;
+                all.char = source.char = g[indexAll];
+            }
+            sourceText += content;
+        } else if (op === -1) {
+            // DIFF_DELETE: 生成文本有、原文本没有
+            for (let number = 0; number < lengthContent; number++) {
+                const indexAll = number + lengthAll;
+                const indexGen = lengthGenerate + number;
+                const generate = getGenerateStore(indexGen);
+                const all = getAllstrings(indexAll);
+                all.index = indexAll;
+                generate.index_in_all = indexAll;
+                all.gen_index = indexGen;
+                const g = mergeText + content;
+                all.char = generate.char = g[indexAll];
+            }
+            generateText += content;
+        } else if (op === 0) {
+            // DIFF_EQUAL: 两边都有
+            for (let number = 0; number < lengthContent; number++) {
+                const indexAll = number + lengthAll;
+                const indexSource = lengthSource + number;
+                const source = getSourceStore(indexSource);
+                const all = getAllstrings(indexAll);
+                source.index_in_all = indexAll;
+                all.index = indexAll;
+                all.source_index = indexSource;
+                const g = mergeText + content;
+                all.char = source.char = g[indexAll];
+            }
+            sourceText += content;
+
+            for (let number = 0; number < lengthContent; number++) {
+                const indexAll = number + lengthAll;
+                const indexGen = lengthGenerate + number;
+                const generate = getGenerateStore(indexGen);
+                const all = getAllstrings(indexAll);
+                all.index = indexAll;
+                generate.index_in_all = indexAll;
+                all.gen_index = indexGen;
+                const g = mergeText + content;
+                all.char = generate.char = g[indexAll];
+            }
+            generateText += content;
+        }
+        mergeText += content;
+    }
+
+    if (generateText.length !== generation_subtitle_text.length) {
+        return `比较生成文件长度不同${generateText.length}和${generation_subtitle_text.length}`;
+    }
+    if (sourceText.length !== source_text_with_no_info.length) {
+        return `比较源文件长度不同${sourceText.length}和${source_text_with_no_info.length}`;
+    }
+
+    const alltextLength = mergeText.length;
+    const audioEnd = generation_subtitle_array[generation_subtitle_array.length - 1].audio_end;
+
+    // ---- 从生成文本添加时间戳 ----
+    let text = '';
+    let istart = true;
+    let lastpoint = 0;
+
+    for (const sentences of generation_subtitle_array) {
+        for (const word of sentences.words) {
+            let currentContent;
+            if (istart) {
+                istart = false;
+                currentContent = word.word;
+                word.whitespace = false;
+            } else {
+                word.whitespace = true;
+                currentContent = wordSplitBy.en + word.word;
+            }
+
+            const lengthGen = text.length;
+            let error = null;
+
+            if (word.start !== undefined) {
+                const start = word.start;
+                const end = word.end;
+                const score = word.score;
+                const wordtext = word.word;
+                const whitespace = word.whitespace;
+                const eva = wordtext.length > 0 ? (end - start) / wordtext.length : 0;
+                if (eva > 0.2) {
+                    error = `从生成添加时间,长度大${eva}`;
+                }
+                let newstart = start;
+                lastpoint = end;
+
+                for (let number = 0; number < currentContent.length; number++) {
+                    const generate = getGenerateStore(lengthGen + number);
+                    const indexAll = generate.index_in_all;
+                    const all = getAllstrings(indexAll);
+                    all.char_gen_add_in_time = currentContent[number];
+                    all.wordtext = wordtext;
+                    all.score = score;
+                    all.eva = eva;
+
+                    if (whitespace && number === 0) {
+                        all.audio_start = newstart;
+                        all.audio_end = newstart;
+                    } else if (number === currentContent.length - 1) {
+                        all.audio_start = newstart;
+                        all.audio_end = end;
+                    } else {
+                        all.audio_start = newstart;
+                        newstart = Math.round((newstart + eva) * 1000) / 1000;
+                        all.audio_end = newstart;
+                    }
+                    if (error) all.error = error;
+                }
+            } else {
+                word.error = error = '从生成添加时间,没有时间';
+                const wordtext = word.word;
+                for (let number = 0; number < currentContent.length; number++) {
+                    const generate = getGenerateStore(lengthGen + number);
+                    const indexAll = generate.index_in_all;
+                    const all = getAllstrings(indexAll);
+                    all.char_gen_add_in_time = currentContent[number];
+                    all.wordtext = wordtext;
+                    all.score = 0;
+                    all.eva = 0;
+                    all.audio_start = lastpoint;
+                    all.audio_end = lastpoint;
+                    if (error) all.error = error;
+                }
+            }
+            text += currentContent;
+        }
+    }
+
+    if (text.length !== generation_subtitle_text.length) {
+        return `从生成添加时间 长度不同${text.length}和${generation_subtitle_text.length}`;
+    }
+
+    // ---- 源文本添加时间戳 ----
+    mergeText = '';
+    let lastOp = null;
+
+    for (let i = 0; i < diffs.length; i++) {
+        const [op, content] = diffs[i];
+        const lengthAll = mergeText.length;
+        const lengthContent = content.length;
+
+        if (op === 1) {
+            if (lastOp === null) {
+                let genSource = null;
+                let audioDurio = 0.1;
+                if (lengthAll + lengthContent >= alltextLength) {
+                    audioDurio = audioEnd;
+                    genSource = '结束';
+                } else {
+                    const allEnd = getAllstrings(lengthAll + lengthContent - 1);
+                    if (allEnd.audio_start !== undefined) {
+                        genSource = allEnd;
+                        audioDurio = Math.max(allEnd.audio_start - 0.1, 0);
+                    }
+                }
+                const eva = lengthContent > 0 ? audioDurio / lengthContent : 0;
+                let newstart = 0;
+                for (let number = 0; number < lengthContent; number++) {
+                    const indexAll = number + lengthAll;
+                    const all = getAllstrings(indexAll);
+                    all.audio_start = newstart;
+                    newstart = Math.round((newstart + eva) * 1000) / 1000;
+                    all.audio_end = newstart;
+                    all.eva = eva;
+                    all.from = '生成开头丢失文本';
+                    all.gen = genSource;
+                }
+            } else if (lastOp.op === 0) {
+                let genSource = lastOp;
+                let newstart = lastOp.all_end.audio_end;
+                let audioEndVal = newstart + 0.2;
+                if (lengthAll + lengthContent >= alltextLength) {
+                    audioEndVal = audioEnd;
+                    genSource = '结束';
+                } else {
+                    const allEnd = getAllstrings(lengthAll + lengthContent - 1);
+                    if (allEnd.audio_start !== undefined) {
+                        genSource = allEnd;
+                        audioEndVal = Math.max(allEnd.audio_start - 0.1, 0);
+                    }
+                }
+                const audioDurio = audioEndVal - newstart;
+                const eva = lengthContent > 0 ? audioDurio / lengthContent : 0;
+                for (let number = 0; number < lengthContent; number++) {
+                    const indexAll = number + lengthAll;
+                    const all = getAllstrings(indexAll);
+                    all.audio_start = newstart;
+                    newstart = Math.round((newstart + eva) * 1000) / 1000;
+                    all.audio_end = newstart;
+                    all.eva = eva;
+                    all.from = '生成丢失单词';
+                    all.gen = genSource;
+                }
+            } else if (lastOp.op === -1) {
+                const allStart = lastOp.all_start;
+                const allEnd = lastOp.all_end;
+                let newstart = allStart.audio_start;
+                const audioDurio = allEnd.audio_end - newstart;
+                const eva = lengthContent > 0 ? audioDurio / lengthContent : 0;
+                for (let number = 0; number < lengthContent; number++) {
+                    const indexAll = number + lengthAll;
+                    const all = getAllstrings(indexAll);
+                    all.audio_start = newstart;
+                    newstart = Math.round((newstart + eva) * 1000) / 1000;
+                    all.audio_end = newstart;
+                    all.eva = eva;
+                    all.from = '生成错误文本';
+                    all.gen = lastOp;
+                }
+            }
+            lastOp = null;
+        } else if (op === -1) {
+            const allStart = getAllstrings(lengthAll);
+            const allEnd = getAllstrings(lengthAll + lengthContent - 1);
+            lastOp = { all_start: allStart, all_end: allEnd, op };
+        } else if (op === 0) {
+            const allStart = getAllstrings(lengthAll);
+            const allEnd = getAllstrings(lengthAll + lengthContent - 1);
+            lastOp = { all_start: allStart, all_end: allEnd, op };
+        }
+        mergeText += content;
+    }
+
+    // ---- 检查所有源文件字符串都赋予时间戳 ----
+    for (const x of Object.values(allstrings)) {
+        if (x.source_index !== undefined && x.audio_start === undefined) {
+            return `检查到没有正常赋值${JSON.stringify(x)}`;
+        }
+    }
+
+    // ---- 每个单词的结尾处添加 0.2 长度 ----
+    const sortedKeys = Object.keys(allstrings).map(Number).sort((a, b) => a - b);
+    const sortedValues = sortedKeys.map(k => allstrings[k]);
+    const les = sortedValues.length;
+    for (let i = 0; i < les; i++) {
+        if (i > 0 && i < les - 1) {
+            const s = sortedValues[i];
+            const nextitem = sortedValues[i + 1];
+            if (nextitem.audio_start !== undefined && s.audio_end !== undefined) {
+                const currentAudioEnd = s.audio_end;
+                const nextAudioStart = nextitem.audio_start;
+                if (nextAudioStart - currentAudioEnd >= 0.3) {
+                    s.audio_end = Math.round((s.audio_end + 0.1) * 1000) / 1000;
+                    nextitem.audio_start = Math.round((nextitem.audio_start - 0.1) * 1000) / 1000;
+                }
+            }
+        }
+    }
+
+    // ---- 生成字幕文件 ----
+    text = '';
+    istart = true;
+    let index = 0;
+    let sourceSrt = '';
+    let mergeSrt = '';
+
+    const fs = require('fs');
+    const path = require('path');
+
+    for (const content of source_text_with_info.contents) {
+        index++;
+        let currentContent;
+        if (istart) {
+            istart = false;
+            currentContent = content.content;
+        } else {
+            currentContent = wordSplitBy.en + content.content;
+        }
+
+        if (content.type !== null) {
+            const source = getSourceStore(text.length);
+            const endsource = getSourceStore(Math.min(text.length + currentContent.length - 1, alltextLength - 1));
+            if (endsource.index_in_all === undefined || source.index_in_all === undefined) {
+                console.log(`不该发生的错误,找不到存储${JSON.stringify(content)}`);
+                text += currentContent;
+                continue;
+            }
+            const start = getAllstrings(source.index_in_all);
+            const end = getAllstrings(endsource.index_in_all);
+
+            const srtStart = formatTime(start.audio_start);
+            const srtEnd = formatTime(end.audio_end);
+
+            let mergeTransContent = '';
+            for (const [k, value] of Object.entries(translate_text_dict)) {
+                const transContents = value.translate_text_with_info?.contents;
+                if (!transContents || index - 1 >= transContents.length) continue;
+                const transContentText = transContents[index - 1].content;
+                mergeTransContent += transContentText + '\n';
+                if (value.trans_srt === undefined) value.trans_srt = '';
+                value.trans_srt += `${index}\n${srtStart} --> ${srtEnd}\n${transContentText}\n\n`;
+            }
+
+            const contentText = content.content;
+            sourceSrt += `${index}\n${srtStart} --> ${srtEnd}\n${contentText}\n\n`;
+
+            if (gen_merge_srt && mergeTransContent !== '') {
+                mergeTransContent = mergeTransContent.replace(/\n$/, '');
+                if (source_up_order) {
+                    mergeSrt += `${index}\n${srtStart} --> ${srtEnd}\n${contentText}\n${mergeTransContent}\n\n`;
+                } else {
+                    mergeSrt += `${index}\n${srtStart} --> ${srtEnd}\n${mergeTransContent}\n${contentText}\n\n`;
+                }
+            }
+        }
+        text += currentContent;
+    }
+
+    if (text.length !== source_text_with_no_info.length) {
+        return `核对源文本段落长度不同${text.length}和${source_text_with_no_info.length}`;
+    }
+
+    // ---- 写入原 SRT ----
+    if (source_srt_path) {
+        const srtDir = path.dirname(source_srt_path);
+        if (srtDir) fs.mkdirSync(srtDir, { recursive: true });
+        fs.writeFileSync(source_srt_path, sourceSrt, 'utf-8');
+    } else {
+        writeToPath(sourceSrt, directory, `${title}_${language}_source`, 'srt');
+    }
+
+    // ---- 写入翻译 SRT ----
+    for (const [k, value] of Object.entries(translate_text_dict)) {
+        const transSrt = value.trans_srt || '';
+        const filename = k.replace('.txt', '');
+        writeToPath(transSrt, directory, `${title}_${language}_${filename}_translate`, 'srt');
+    }
+
+    // ---- 写入合并 SRT ----
+    if (gen_merge_srt) {
+        if (mergeSrt !== '') {
+            writeToPath(mergeSrt, directory, `${title}_${language}_merge`, 'srt');
+        } else {
+            console.log('翻译文本为空，不再生成合并srt文件。');
+        }
+    }
+
+    // ---- 导出 FCPXML ----
+    if (export_fcpxml) {
+        let savePath;
+        if (fcpxml_path) {
+            savePath = fcpxml_path;
+            const fcpxmlDir = path.dirname(savePath);
+            if (fcpxmlDir) fs.mkdirSync(fcpxmlDir, { recursive: true });
+        } else {
+            savePath = path.join(directory, `${title}_${language}.fcpxml`);
+        }
+
+        const translateSrtList = [];
+        for (const value of Object.values(translate_text_dict)) {
+            translateSrtList.push(value.trans_srt || '');
+        }
+        SrtsToFcpxml(sourceSrt, translateSrtList, savePath, seamless_fcpxml);
+    }
+
+    return `生成了字幕文件${title}`;
+}
+
+// ==================== 主对齐入口 ====================
+
+/**
+ * 主对齐函数
+ * 完整移植自 audio_subtitle_search_diffent_strong
+ *
+ * @param {string} currentLanguage      语言代码
+ * @param {string} directory            输出目录
+ * @param {string} fileName             文件名（不含扩展名）
+ * @param {Array}  generationSubtitleArray  Gladia 转录结果（含词级别时间戳）
+ * @param {string} generationSubtitleText   转录纯文本
+ * @param {Object} sourceTextWithInfo       read_text_with_google_doc 的返回值
+ * @param {Object} translateTextDict        翻译文本字典
+ * @param {boolean} genMergeSrt             是否生成合并 SRT
+ * @param {boolean} sourceUpOrder           源文本在上方
+ * @param {boolean} exportFcpxml            是否导出 FCPXML
+ * @param {boolean} seamlessFcpxml          FCPXML 是否无缝
+ * @param {string}  sourceSrtPath           可选，指定源SRT输出路径
+ * @param {string}  fcpxmlPath              可选，指定FCPXML输出路径
+ */
+/**
+ * 检测并去除转录文本开头的多余语音（不在用户文案中的部分）
+ * 使用 DMP 模糊匹配找到文案在转录中的起始位置
+ */
+function _trimLeadingExtraSpeech(genArray, genText, cleanedSourceText) {
+    const cleanedGenText = cleanText(genText);
+
+    // 转录文本不比源文本长，无需裁剪
+    if (cleanedGenText.length <= cleanedSourceText.length + 5) return null;
+
+    // 用源文本前 32 字符做探针（match_main 上限 32）
+    const probeLen = Math.min(32, cleanedSourceText.length);
+    const probe = cleanedSourceText.substring(0, probeLen);
+
+    const dmp = new DiffMatchPatch();
+    dmp.Match_Threshold = 0.5;
+    dmp.Match_Distance = cleanedGenText.length;
+    const matchPos = dmp.match_main(cleanedGenText, probe, 0);
+
+    // 探针在开头匹配或匹配失败→无需裁剪
+    if (matchPos <= 3 || matchPos === -1) return null;
+
+    // 统计 matchPos 之前有多少个词（按空格分割）
+    const prefix = cleanedGenText.substring(0, matchPos);
+    const wordsToSkip = prefix.split(/\s+/).filter(w => w).length;
+    if (wordsToSkip <= 0) return null;
+
+    // 在 genArray 中跳过对应数量的词，重建数组和文本
+    let skipped = 0;
+    for (let si = 0; si < genArray.length; si++) {
+        const sentence = genArray[si];
+        for (let wi = 0; wi < sentence.words.length; wi++) {
+            if (skipped >= wordsToSkip) {
+                // 从此处截断，保留后续内容
+                const newArray = [];
+                const restWords = sentence.words.slice(wi);
+                if (restWords.length > 0) {
+                    newArray.push({
+                        audio_start: restWords[0].start != null ? restWords[0].start : sentence.audio_start,
+                        audio_end: sentence.audio_end,
+                        text: restWords.map(w => w.word).join(' '),
+                        words: restWords,
+                    });
+                }
+                for (let ri = si + 1; ri < genArray.length; ri++) {
+                    newArray.push(genArray[ri]);
+                }
+                // 重建纯文本
+                let newText = '';
+                let first = true;
+                for (const s of newArray) {
+                    for (const w of s.words) {
+                        newText += first ? w.word : (' ' + w.word);
+                        first = false;
+                    }
+                }
+                return { array: newArray, text: newText, skippedWords: wordsToSkip };
+            }
+            skipped++;
+        }
+    }
+    return null;
+}
+
+function audioSubtitleSearchDifferentStrong(
+    currentLanguage, directory, fileName,
+    generationSubtitleArray, generationSubtitleText,
+    sourceTextWithInfo, translateTextDict,
+    genMergeSrt, sourceUpOrder, exportFcpxml, seamlessFcpxml,
+    sourceSrtPath = null, fcpxmlPath = null,
+    ignoreMismatch = false
+) {
+    // 新请求已在转录适配层优先使用带标点的词；这里兼容此前已写入磁盘的缓存，
+    // 免得用户必须清理每条音频的缓存才能重新对齐。
+    if (repairTimelinePunctuation(generationSubtitleArray, generationSubtitleText)) {
+        console.log('[字幕对齐] 已从完整转写文本补回缓存时间线的标点');
+    }
+    // 不同平台、旧缓存和少数接口响应会出现“全文”与逐词时间线不完全一致。
+    // 后续字符→时间映射实际只认逐词时间线；若继续以全文的长度为准，会在
+    // processDiffsWithAudioPositionsStrong 中把正常任务误报为“长度不同”。
+    // 改用时间线重建文本后，真实听写差异仍由下方相似度校验拦截。
+    const timelineText = buildTimelineText(generationSubtitleArray);
+    if (timelineText && cleanText(timelineText).length !== cleanText(generationSubtitleText).length) {
+        console.warn(`[字幕对齐] 全文与逐词时间线长度不一致，改用时间线文本（${cleanText(generationSubtitleText).length} → ${cleanText(timelineText).length}）`);
+        generationSubtitleText = timelineText;
+    }
+    // 构建纯文本（不含结构信息）
+    let sourceTextWithNoInfo = '';
+    for (const content of sourceTextWithInfo.contents) {
+        sourceTextWithNoInfo += wordSplitBy.en + content.content;
+    }
+
+    // 清理文本
+    const cleanedSourceText = cleanText(sourceTextWithNoInfo);
+
+    // === 检测并去除开头多余语音 ===
+    const trimResult = _trimLeadingExtraSpeech(
+        generationSubtitleArray, generationSubtitleText, cleanedSourceText
+    );
+    if (trimResult) {
+        generationSubtitleArray = trimResult.array;
+        generationSubtitleText = trimResult.text;
+        console.log(`[字幕对齐] 检测到开头多余语音，已跳过 ${trimResult.skippedWords} 个词`);
+    }
+
+    const cleanedGenText = cleanText(generationSubtitleText);
+
+    // 执行 diff
+    const dmp = new DiffMatchPatch();
+    dmp.Diff_Timeout = 0;
+    const diffs = dmp.diff_main(cleanedGenText, cleanedSourceText);
+    dmp.diff_cleanupSemantic(diffs);
+
+    // === 文案匹配度检测 ===
+    if (!ignoreMismatch) {
+        let equalLen = 0;
+        for (const [op, text] of diffs) {
+            if (op === 0) equalLen += text.length;
+        }
+        const maxLen = Math.max(cleanedGenText.length, cleanedSourceText.length);
+        const similarity = maxLen === 0 ? 1 : equalLen / maxLen;
+
+        if (similarity < 0.85) {
+            // 构建带换行的原始识别文案，方便前端展示或替换
+            let recognizedText = '';
+            if (Array.isArray(generationSubtitleArray)) {
+                recognizedText = generationSubtitleArray.map(p => {
+                    if (p.text) return p.text;
+                    if (Array.isArray(p.words)) return p.words.map(w => w.word).join(' ');
+                    return '';
+                }).join('\n');
+            } else {
+                recognizedText = generationSubtitleText;
+            }
+
+            return JSON.stringify({
+                code: 'TEXT_MISMATCH',
+                similarity: Math.round(similarity * 100),
+                recognized_text: recognizedText
+            });
+        }
+    }
+
+    return processDiffsWithAudioPositionsStrong({
+        title: fileName,
+        diffs,
+        directory,
+        language: currentLanguage,
+        gen_merge_srt: genMergeSrt,
+        source_up_order: sourceUpOrder,
+        export_fcpxml: exportFcpxml,
+        seamless_fcpxml: seamlessFcpxml,
+        source_srt_path: sourceSrtPath,
+        fcpxml_path: fcpxmlPath,
+        source_text_with_no_info: cleanedSourceText,
+        translate_text_dict: translateTextDict,
+        generation_subtitle_text: cleanedGenText,
+        source_text_with_info: sourceTextWithInfo,
+        generation_subtitle_array: generationSubtitleArray,
+    });
+}
+
+module.exports = {
+    formatTime,
+    cleanText,
+    audioSubtitleSearchDifferentStrong,
+};

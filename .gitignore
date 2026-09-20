@@ -1,0 +1,120 @@
+# ==================== 依赖 ====================
+node_modules/
+.pnpm-store/
+
+# ==================== 构建产物 ====================
+dist/
+dist-electron/
+*.dmg
+*.zip
+*.AppImage
+*.deb
+*.exe
+
+# ==================== Python ====================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+ENV/
+
+# ==================== 日志和临时文件 ====================
+log/
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ==================== 上传目录（用户数据）====================
+backend/uploads/
+uploads/
+
+# ==================== 系统文件 ====================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ==================== IDE ====================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ==================== 环境变量 ====================
+.env
+.env.local
+.env.*.local
+backend/elevenlabs_settings.json
+backend/gemini_keys.json
+backend/gladia_keys.json
+backend/transcription_providers.json
+
+# ==================== Electron Builder ====================
+builder-effective-config.yaml
+
+# ==================== Vendor（大文件，按需提交）====================
+# 如果 vendor 目录太大，可以取消下面的注释来忽略
+# vendor/windows/python/
+# vendor/windows/ffmpeg/
+# vendor/linux/
+# vendor/darwin/
+# 排除大型 vendor 目录
+vendor/windows/python/
+vendor/windows/ffmpeg/
+vendor/linux/
+vendor/darwin/
+vendor/wav2lip/checkpoints/
+vendor/wav2lip/face_detection/checkpoints/
+vendor/wav2lip/face_detection/hub/
+vendor/wav2lip/temp/
+vendor/wav2lip/__pycache__/
+vendor/face_detection/
+
+# ==================== CodeQL & Security ====================
+codeql-db/
+*.sarif
+electron/pipe_frames.raw
+.codeql-db/
+
+# ==================== 临时测试媒体与项目文件 ====================
+*.wav
+*.drt
+*.fcpxml
+*预设*.json
+82套爆款短视频覆层预设完整库.json
+test-listener.js
+parse_sarif.py
+scratch_detail.py
+security_best_practices_report.md
+QuickCut-*/
+
+# ==================== 测试用例（仅本地运行，不推送到 Git）====================
+tests/
+
+# ==================== 备份与调试测试文件 ====================
+*.bak
+electron/*.mp4
+electron/*.raw
+electron/*.png
+electron/*.jpg
+electron/test_*.js
+electron/check_blend.js
+
+# Local personal fonts (not release assets)
+fonts-local/
+
+.venv-edge/
+
+# Local validation outputs
+diagnostics/
+queue-library-preview.png

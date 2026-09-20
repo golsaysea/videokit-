@@ -1,0 +1,810 @@
+{
+  "sourceFiles": 116,
+  "coveredFiles": 26,
+  "addedFiles": 90,
+  "families": [
+    "Archivo",
+    "Bodoni Moda",
+    "Caveat",
+    "Cormorant Garamond",
+    "Inter",
+    "Josefin Sans",
+    "Lato",
+    "League Spartan",
+    "Libre Baskerville",
+    "Manrope",
+    "Merriweather",
+    "Montserrat",
+    "Noto Sans",
+    "Noto Sans SC",
+    "Noto Serif SC",
+    "Nunito",
+    "Open Sans",
+    "Pacifico",
+    "Poppins",
+    "Prata",
+    "Quicksand",
+    "Raleway",
+    "Rubik",
+    "SourceCodeVF",
+    "Source Han Sans SC",
+    "Source Han Serif SC",
+    "SourceSans3VF",
+    "Source Serif 4 Variable",
+    "TikTok Sans",
+    "ALL AGES",
+    "Ambara Djiwa",
+    "Ambara Djiwa Outline",
+    "Ananda Black Personal Use",
+    "Angel demo",
+    "Anime",
+    "Beautiful People Personal Use",
+    "BrookeShappell8",
+    "CARBON PERSONAL USE",
+    "Christmas Sprouts",
+    "CITRICACID PERSONAL USE",
+    "CRACKLINE Demo",
+    "Dailymirror Personal Use",
+    "DEATHE MAACH NCV",
+    "Drip October",
+    "Granika",
+    "Hello_Graduation_Sans",
+    "Hello World",
+    "Wtf Horseland",
+    "i Invade",
+    "j Jacenta",
+    "j Jemur",
+    "Kissing Season",
+    "Lakon Rokum Trial",
+    "Leander",
+    "LittleMissPriss",
+    "Love Letters",
+    "Magic Saturday",
+    "MGF Pinlock Personal Use",
+    "Mintmolly",
+    "Mouldy Cheese",
+    "Olibrick",
+    "Opsilon",
+    "Origins Christmas",
+    "Pinko",
+    "Postbook",
+    "Radion",
+    "Rainbow Sans",
+    "Rainbow Sans Bold",
+    "Rainbow Sans Color",
+    "Robin Chandler Demo",
+    "Rushford Printed",
+    "Sacrifice Demo",
+    "Keraleeyam",
+    "Rachana",
+    "Uroob",
+    "Sparky Stones",
+    "SPEARHEAD",
+    "Spooky Winter",
+    "Super Brain",
+    "Super Wild",
+    "Valentine Cupcake"
+  ],
+  "added": [
+    {
+      "family": "Archivo",
+      "style": "SemiBold",
+      "weight": "100 900",
+      "source": "fonts\\open\\archivo\\Archivo[wdth,wght].ttf",
+      "target": "VideoKit-main\\assets\\fonts\\Archivo\\Archivo-VariableFont-wght-Regular.ttf",
+      "sha256": "0e094a7d3c7c4c25cf1310c4b30014f1dae9332220b1c2c88f4fa996f0b05053"
+    },
+    {
+      "family": "Bodoni Moda",
+      "style": "Regular",
+      "weight": "400 900",
+      "source": "fonts\\open\\bodonimoda\\BodoniModa[opsz,wght].ttf",
+      "target": "VideoKit-main\\assets\\fonts\\Bodoni Moda\\BodoniModa-VariableFont-wght-Regular.ttf",
+      "sha256": "550f5e34ee0a828d7941b1fe9bc58b34e5260d3f33a61532e6d0a0114e79a5cf"
+    },
+    {
+      "family": "Caveat",
+      "style": "Regular",
+      "weight": "400 700",
+      "source": "fonts\\open\\caveat\\Caveat[wght].ttf",
+      "target": "VideoKit-main\\assets\\fonts\\Caveat\\Caveat-VariableFont-wght-Regular.ttf",
+      "sha256": "0bdb6b660482d31531b3945849fba5916b3ef8695da7024a9e6b9ee3c4157988"
+    },
+    {
+      "family": "Cormorant Garamond",
+      "style": "Light",
+      "weight": "300 700",
+      "source": "fonts\\open\\cormorantgaramond\\CormorantGaramond[wght].ttf",
+      "target": "VideoKit-main\\assets\\fonts\\Cormorant Garamond\\CormorantGaramond-VariableFont-wght-Regular.ttf",
+      "sha256": "b20b7d9626dd956b2c5e558692ad328b1f19e3275e2782db4fa07670d83f35e0"
+    },
+    {
+      "family": "Inter",
+      "style": "Regular",
+      "weight": "100 900",
+      "source": "fonts\\open\\inter\\Inter[opsz,wght].ttf",
+      "target": "VideoKit-main\\assets\\fonts\\Inter\\Inter-VariableFont-wght-Regular.ttf",
+      "sha256": "29160a80ff49ddcab2c97711247e08b1fab27a484a329ce8b813d820dc559031"
+    },
+    {
+      "family": "Josefin Sans",
+      "style": "Thin",
+      "weight": "100 700",
+      "source": "fonts\\open\\josefinsans\\JosefinSans[wght].ttf",
+      "target": "VideoKit-main\\assets\\fonts\\Josefin Sans\\JosefinSans-VariableFont-wght-Regular.ttf",
+      "sha256": "9255abdb5f393bc51e101abbd07a716a977fd3e15472b1b84b260f426a342bfd"
+    },
+    {
+      "family": "Lato",
+      "style": "Bold",
+      "weight": "700",
+      "source": "fonts\\open\\lato\\Lato-Bold.ttf",
+      "target": "VideoKit-main\\assets\\fonts\\Lato\\Lato-Bold.ttf",
+      "sha256": "8a0aace75d33794eece4b28187bfc1df0bbd2888b5d8a56e01788c8d65d16be1"
+    },
+    {
+      "family": "Lato",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\open\\lato\\Lato-Regular.ttf",
+      "target": "VideoKit-main\\assets\\fonts\\Lato\\Lato-Regular.ttf",
+      "sha256": "d636e4683231f931eda222d588e944d082bfd3bdba02f928bee461c0f185b251"
+    },
+    {
+      "family": "League Spartan",
+      "style": "Thin",
+      "weight": "100 900",
+      "source": "fonts\\open\\leaguespartan\\LeagueSpartan[wght].ttf",
+      "target": "VideoKit-main\\assets\\fonts\\League Spartan\\LeagueSpartan-VariableFont-wght-Regular.ttf",
+      "sha256": "2dbb6290b39ab7c48a40b18f74ca59ef48a69a015c3ea0542703f0c6ce51d617"
+    },
+    {
+      "family": "Libre Baskerville",
+      "style": "Regular",
+      "weight": "400 700",
+      "source": "fonts\\open\\librebaskerville\\LibreBaskerville[wght].ttf",
+      "target": "VideoKit-main\\assets\\fonts\\Libre Baskerville\\LibreBaskerville-VariableFont-wght-Regular.ttf",
+      "sha256": "05a95421961341c5b2556285e8415df9db27dab4f4abe22b446b3c6a8b916c5d"
+    },
+    {
+      "family": "Manrope",
+      "style": "ExtraLight",
+      "weight": "200 800",
+      "source": "fonts\\open\\manrope\\Manrope[wght].ttf",
+      "target": "VideoKit-main\\assets\\fonts\\Manrope\\Manrope-VariableFont-wght-Regular.ttf",
+      "sha256": "d0639be45d0af36e798172419d7bd173c4bd4f29e2b76cbb69db1d11bf8b0a40"
+    },
+    {
+      "family": "Merriweather",
+      "style": "Light",
+      "weight": "300 900",
+      "source": "fonts\\open\\merriweather\\Merriweather[opsz,wdth,wght].ttf",
+      "target": "VideoKit-main\\assets\\fonts\\Merriweather\\Merriweather-VariableFont-wght-Regular.ttf",
+      "sha256": "d0ed0e359e396af7ad05e73dffd11a3a4c326ea0d0283c56bd9361cb2cc86a96"
+    },
+    {
+      "family": "Montserrat",
+      "style": "Thin",
+      "weight": "100 900",
+      "source": "fonts\\open\\montserrat\\Montserrat[wght].ttf",
+      "target": "VideoKit-main\\assets\\fonts\\Montserrat\\Montserrat-VariableFont-wght-Regular.ttf",
+      "sha256": "0f7b311b2f3279e4eef9b2f968bcdbab6e28f4daeb1f049f4f278a902bcd82f7"
+    },
+    {
+      "family": "Noto Sans",
+      "style": "Regular",
+      "weight": "100 900",
+      "source": "fonts\\open\\notosans\\NotoSans[wdth,wght].ttf",
+      "target": "VideoKit-main\\assets\\fonts\\Noto Sans\\NotoSans-VariableFont-wght-Regular.ttf",
+      "sha256": "bfb7bb691513f12e734dc346c03a03f784912432d7e3fa8e56efcf906fe86b3d"
+    },
+    {
+      "family": "Noto Sans SC",
+      "style": "Thin",
+      "weight": "100 900",
+      "source": "fonts\\open\\notosanssc\\NotoSansSC[wght].ttf",
+      "target": "VideoKit-main\\assets\\fonts\\Noto Sans SC\\NotoSansSC-VariableFont-wght-Regular.ttf",
+      "sha256": "a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da"
+    },
+    {
+      "family": "Noto Serif SC",
+      "style": "ExtraLight",
+      "weight": "200 900",
+      "source": "fonts\\open\\notoserifsc\\NotoSerifSC[wght].ttf",
+      "target": "VideoKit-main\\assets\\fonts\\Noto Serif SC\\NotoSerifSC-VariableFont-wght-Regular.ttf",
+      "sha256": "050080d9255a86808f2945bffac582b31ef32bc36411ce29563b4961670c66f9"
+    },
+    {
+      "family": "Nunito",
+      "style": "ExtraLight",
+      "weight": "200 1000",
+      "source": "fonts\\open\\nunito\\Nunito[wght].ttf",
+      "target": "VideoKit-main\\assets\\fonts\\Nunito\\Nunito-VariableFont-wght-Regular.ttf",
+      "sha256": "bb55a5ca5c2042335b3991af27c4d0705d0ef41cac6164ac737fd8f2a1e85207"
+    },
+    {
+      "family": "Open Sans",
+      "style": "Regular",
+      "weight": "300 800",
+      "source": "fonts\\open\\opensans\\OpenSans[wdth,wght].ttf",
+      "target": "VideoKit-main\\assets\\fonts\\Open Sans\\OpenSans-VariableFont-wght-Regular.ttf",
+      "sha256": "36643644f318a812aab2d2ed3bb98f8cf0872527f835fe9398d95fe6b9adb878"
+    },
+    {
+      "family": "Pacifico",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\open\\pacifico\\Pacifico-Regular.ttf",
+      "target": "VideoKit-main\\assets\\fonts\\Pacifico\\Pacifico-Regular.ttf",
+      "sha256": "5b6c0d5334a7bf77dea52b975c5a0c408878c0f7115ed5b6fb151f634b7bf701"
+    },
+    {
+      "family": "Poppins",
+      "style": "Bold",
+      "weight": "700",
+      "source": "fonts\\open\\poppins\\Poppins-Bold.ttf",
+      "target": "VideoKit-main\\assets\\fonts\\Poppins\\Poppins-Bold.ttf",
+      "sha256": "983676516167748b74de6f4771fb384c664fd913acb8b471122ecacf5da5ea6c"
+    },
+    {
+      "family": "Poppins",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\open\\poppins\\Poppins-Regular.ttf",
+      "target": "VideoKit-main\\assets\\fonts\\Poppins\\Poppins-Regular.ttf",
+      "sha256": "7e65201e9b79159e2300267cc885e16c8dcef2424cdfa09a29bfb0980a94a7ba"
+    },
+    {
+      "family": "Prata",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\open\\prata\\Prata-Regular.ttf",
+      "target": "VideoKit-main\\assets\\fonts\\Prata\\Prata-Regular.ttf",
+      "sha256": "3b2b880737be3bda5f03554297b758516876157c88f9e3b3bae8fa1fc96a2c2c"
+    },
+    {
+      "family": "Quicksand",
+      "style": "Light",
+      "weight": "300 700",
+      "source": "fonts\\open\\quicksand\\Quicksand[wght].ttf",
+      "target": "VideoKit-main\\assets\\fonts\\Quicksand\\Quicksand-VariableFont-wght-Regular.ttf",
+      "sha256": "39c9b64223561f56aaff6062a6f04063c4fc86809ad6768722c06614d977e1cc"
+    },
+    {
+      "family": "Raleway",
+      "style": "Thin",
+      "weight": "100 900",
+      "source": "fonts\\open\\raleway\\Raleway[wght].ttf",
+      "target": "VideoKit-main\\assets\\fonts\\Raleway\\Raleway-VariableFont-wght-Regular.ttf",
+      "sha256": "8bbcc3eb8275c388f4bcd998832f8a4b943eadbaf6a595205312774b5951aefb"
+    },
+    {
+      "family": "Rubik",
+      "style": "Light",
+      "weight": "300 900",
+      "source": "fonts\\open\\rubik\\Rubik[wght].ttf",
+      "target": "VideoKit-main\\assets\\fonts\\Rubik\\Rubik-VariableFont-wght-Regular.ttf",
+      "sha256": "1b3a7437ba2af80e465e773ed60c5036d1ba6ace492d89046dbcf18fb31e4e88"
+    },
+    {
+      "family": "SourceCodeVF",
+      "style": "Regular",
+      "weight": "200 900",
+      "source": "fonts\\open\\sourcecodepro\\SourceCodeVF-Upright.ttf",
+      "target": "VideoKit-main\\assets\\fonts\\SourceCodeVF\\SourceCodeVF-VariableFont-wght-Regular.ttf",
+      "sha256": "c4066e584e995ec317a072f1777742861d3ce0bf210096b84450a249d0210198"
+    },
+    {
+      "family": "Source Han Sans SC",
+      "style": "Bold",
+      "weight": "700",
+      "source": "fonts\\open\\sourcehansanssc\\SourceHanSansSC-Bold.otf",
+      "target": "VideoKit-main\\assets\\fonts\\Source Han Sans SC\\SourceHanSansSC-Bold.otf",
+      "sha256": "df2b90f5bcc6d01dfc964cec5f6d535d6b6aebd26ed7fd79a9c1b3f2112fcb6b"
+    },
+    {
+      "family": "Source Han Sans SC",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\open\\sourcehansanssc\\SourceHanSansSC-Regular.otf",
+      "target": "VideoKit-main\\assets\\fonts\\Source Han Sans SC\\SourceHanSansSC-Regular.otf",
+      "sha256": "f1d8611151880c6c336aabeac4640ef434fa13cbfbf1ffe82d0a71b2a5637256"
+    },
+    {
+      "family": "Source Han Serif SC",
+      "style": "Bold",
+      "weight": "700",
+      "source": "fonts\\open\\sourcehanserifsc\\SourceHanSerifSC-Bold.otf",
+      "target": "VideoKit-main\\assets\\fonts\\Source Han Serif SC\\SourceHanSerifSC-Bold.otf",
+      "sha256": "706b8c0de2deff6cbc0c87e2cdedfd33a78b7ffd76cebb4549012f197ba611fe"
+    },
+    {
+      "family": "Source Han Serif SC",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\open\\sourcehanserifsc\\SourceHanSerifSC-Regular.otf",
+      "target": "VideoKit-main\\assets\\fonts\\Source Han Serif SC\\SourceHanSerifSC-Regular.otf",
+      "sha256": "78aa7a328fd974df2d688c8a9fd74a33d8334dfa84ab24d9d11efb2ffc464117"
+    },
+    {
+      "family": "SourceSans3VF",
+      "style": "Regular",
+      "weight": "200 900",
+      "source": "fonts\\open\\sourcesans3\\SourceSans3VF-Upright.ttf",
+      "target": "VideoKit-main\\assets\\fonts\\SourceSans3VF\\SourceSans3VF-VariableFont-wght-Regular.ttf",
+      "sha256": "1147db9a3f0edd4956068de77930148acce2742dd76d57f7239b2b1c687ac63f"
+    },
+    {
+      "family": "Source Serif 4 Variable",
+      "style": "Regular",
+      "weight": "200 900",
+      "source": "fonts\\open\\sourceserif4\\SourceSerif4Variable-Roman.ttf",
+      "target": "VideoKit-main\\assets\\fonts\\Source Serif 4 Variable\\SourceSerif4Variable-VariableFont-wght-Regular.ttf",
+      "sha256": "14d360ee1b76655da9276628b229e11671bc1f5d1083636144db6677d452cf55"
+    },
+    {
+      "family": "TikTok Sans",
+      "style": "Light",
+      "weight": "300 900",
+      "source": "fonts\\open\\tiktoksans\\TikTokSans[opsz,slnt,wdth,wght].ttf",
+      "target": "VideoKit-main\\assets\\fonts\\TikTok Sans\\TikTokSans-VariableFont-wght-Regular.ttf",
+      "sha256": "f7e644e7302850b4afbb28d9cdc68b01595394207f23266be7d10c1644dd9bff"
+    },
+    {
+      "family": "ALL AGES",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\all-ages\\AllAgesDemo-2DPX.ttf",
+      "target": "VideoKit-main\\fonts-local\\ALL AGES\\ALLAGES-Regular.ttf",
+      "sha256": "489d402f822bfc49fdd89cfb150aa9cbf0edc5366cbcaeb3cda62c92b737869d"
+    },
+    {
+      "family": "ALL AGES",
+      "style": "Bold",
+      "weight": "700",
+      "source": "fonts\\personal\\all-ages\\AllAgesDemoBold-vX1L.ttf",
+      "target": "VideoKit-main\\fonts-local\\ALL AGES\\ALLAGES-Bold.ttf",
+      "sha256": "314d160af77bfce5aeb1042f2bec94e8867c7c332de17b66761a46dcac36f626"
+    },
+    {
+      "family": "ALL AGES",
+      "style": "Bold Italic",
+      "weight": "700",
+      "source": "fonts\\personal\\all-ages\\AllAgesDemoBoldItalic-wgR9.ttf",
+      "target": "VideoKit-main\\fonts-local\\ALL AGES\\ALLAGES-Bold-Italic.ttf",
+      "sha256": "fb89039ac6fccd446be908152312f0e1bbd724fff99779ef8b9ce1cf54b7295b"
+    },
+    {
+      "family": "Ambara Djiwa",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\ambara-djiwa\\AmbaraDjiwa-0vy9R.otf",
+      "target": "VideoKit-main\\fonts-local\\Ambara Djiwa\\AmbaraDjiwa-Regular.otf",
+      "sha256": "f85d4ce9b4d2720e24934e783c8b5b7c0027fb5954263482c87260298765e97f"
+    },
+    {
+      "family": "Ambara Djiwa Outline",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\ambara-djiwa\\AmbaraDjiwaOutline-e9WR6.otf",
+      "target": "VideoKit-main\\fonts-local\\Ambara Djiwa Outline\\AmbaraDjiwaOutline-Regular.otf",
+      "sha256": "7d62e9b83fcfd7366b0db855b08b3cb0404a8145ae9aaac8cbc01335752abe38"
+    },
+    {
+      "family": "Ananda Black Personal Use",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\ananda-black\\AnandaBlackPersonalUseRegular-rg9Rx.ttf",
+      "target": "VideoKit-main\\fonts-local\\Ananda Black Personal Use\\AnandaBlackPersonalUse-Regular.ttf",
+      "sha256": "bf96e0d1626a8d6ef618ec23b9b3737e1f049433cbc2562b83e307d8c1145c2d"
+    },
+    {
+      "family": "Angel demo",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\angel-3\\AngelDemoRegular-p7GaR.otf",
+      "target": "VideoKit-main\\fonts-local\\Angel demo\\Angeldemo-Regular.otf",
+      "sha256": "91a6da40a8477b62bfab4aee49bc05e5fb460b6221bba0f47b9181b3d9796d85"
+    },
+    {
+      "family": "Anime",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\anime\\Anime-z8Y9X.otf",
+      "target": "VideoKit-main\\fonts-local\\Anime\\Anime-Regular.otf",
+      "sha256": "632da8f3a346f8362a0a07be810680966727aadbb29f36c8bf23d9d6ac1fa655"
+    },
+    {
+      "family": "Beautiful People Personal Use",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\beautiful-people\\BeautifulPeoplePersonalUse-dE0g.ttf",
+      "target": "VideoKit-main\\fonts-local\\Beautiful People Personal Use\\BeautifulPeoplePersonalUse-Regular.ttf",
+      "sha256": "4c8d5d7f0ea567cb72c7a45e1f5a2b97ace196fe6ec8fda04d3941226b1fd36b"
+    },
+    {
+      "family": "BrookeShappell8",
+      "style": "Medium",
+      "weight": "500",
+      "source": "fonts\\personal\\brookeshappell8\\Brookeshappell8-eoKB.ttf",
+      "target": "VideoKit-main\\fonts-local\\BrookeShappell8\\BrookeShappell8-Medium.ttf",
+      "sha256": "a78c3e9075e7ae2aed625338d5df4e6e19450f6e8789dec29fe8aeac2d40f387"
+    },
+    {
+      "family": "CARBON PERSONAL USE",
+      "style": "Bold",
+      "weight": "600",
+      "source": "fonts\\personal\\carbon\\CarbonPersonalUseBold-VGedw.ttf",
+      "target": "VideoKit-main\\fonts-local\\CARBON PERSONAL USE\\CARBONPERSONALUSE-SemiBold.ttf",
+      "sha256": "0f51b001d98bf69439f61a47d403562581ad54f723dc1b6f6e894419d31387ed"
+    },
+    {
+      "family": "Christmas Sprouts",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\christmas-sprouts\\ChristmasSprouts-goVE.ttf",
+      "target": "VideoKit-main\\fonts-local\\Christmas Sprouts\\ChristmasSprouts-Regular.ttf",
+      "sha256": "32df615049966ebbf81bfdb9856509df77ada3a846084d13132ae82d9daab97c"
+    },
+    {
+      "family": "CITRICACID PERSONAL USE",
+      "style": "Bold Italic",
+      "weight": "400",
+      "source": "fonts\\personal\\citricacid\\CitricacidPersonalUseBoldItalic-K7vxy.ttf",
+      "target": "VideoKit-main\\fonts-local\\CITRICACID PERSONAL USE\\CITRICACIDPERSONALUSE-Regular-Italic.ttf",
+      "sha256": "9f31b630a1889cf1e5cf5dfbe6067e5ce333b92d10bac19d7899995e365c4a26"
+    },
+    {
+      "family": "CRACKLINE Demo",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\crackline\\CracklineDemo-Jpnqj.otf",
+      "target": "VideoKit-main\\fonts-local\\CRACKLINE Demo\\CRACKLINEDemo-Regular.otf",
+      "sha256": "cfda2449e37211acc401f468580f916f4f9442c732eed9ff8dc70f45897f395d"
+    },
+    {
+      "family": "Dailymirror Personal Use",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\dailymirror\\DailymirrorPersonalUseRegular-7B7gP.ttf",
+      "target": "VideoKit-main\\fonts-local\\Dailymirror Personal Use\\DailymirrorPersonalUse-Regular.ttf",
+      "sha256": "042213dd08068e8038a5a2b7b82e4c76db405361ec74b61af40f9ec6005b3e18"
+    },
+    {
+      "family": "DEATHE MAACH NCV",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\deathe-maach-ncv\\DeatheMaachNcv-2ejv.ttf",
+      "target": "VideoKit-main\\fonts-local\\DEATHE MAACH NCV\\DEATHEMAACHNCV-Regular.ttf",
+      "sha256": "67a5dd804088e15f933282c9d5200c64e90cab55b24c535e6f0564ad6a858883"
+    },
+    {
+      "family": "Drip October",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\drip-october\\DripOctober-vm0JA.ttf",
+      "target": "VideoKit-main\\fonts-local\\Drip October\\DripOctober-Regular.ttf",
+      "sha256": "9b175125c1d7f037f95a3f29244d3f34b4f83791e73fc750c7cfb748acd877e1"
+    },
+    {
+      "family": "Granika",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\granika\\Granika-MAm6r.otf",
+      "target": "VideoKit-main\\fonts-local\\Granika\\Granika-Regular.otf",
+      "sha256": "fc2decebd9dd0855f105c85d8f1234bdea6b0702447af19e02c875278d984f8f"
+    },
+    {
+      "family": "Hello_Graduation_Sans",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\hello-graduation-sans\\HelloGraduationSans-d9enl.ttf",
+      "target": "VideoKit-main\\fonts-local\\Hello Graduation Sans\\HelloGraduationSans-Regular.ttf",
+      "sha256": "6f745e3bce1cffd279ec3b68b3b8f62c7ad4667cda047e7340f25c9eb0f9de1e"
+    },
+    {
+      "family": "Hello World",
+      "style": "Reg",
+      "weight": "400",
+      "source": "fonts\\personal\\hello-world\\Helloworld-ovvY0.ttf",
+      "target": "VideoKit-main\\fonts-local\\Hello World\\HelloWorld-Regular.ttf",
+      "sha256": "47695ae1a6efd18a037962990bbfc95674b1986bc3eceb9859ad32dde1411cd0"
+    },
+    {
+      "family": "Wtf Horseland",
+      "style": "Demo",
+      "weight": "400",
+      "source": "fonts\\personal\\horseland\\WtfHorselandDemo-4n3y6.ttf",
+      "target": "VideoKit-main\\fonts-local\\Wtf Horseland\\WtfHorseland-Regular.ttf",
+      "sha256": "d45dbfbf29303c901a1956aa30364b7746591e90502cfc2d5e6b0158ccf7952e"
+    },
+    {
+      "family": "i Invade",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\i-invade\\Invade-eZBZ6.otf",
+      "target": "VideoKit-main\\fonts-local\\i Invade\\iInvade-Regular.otf",
+      "sha256": "31b04eca97b12605e7c9f3ce772b4bc6f5f22ba1ffac54444485955d38fc3766"
+    },
+    {
+      "family": "j Jacenta",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\j-jacenta\\Jacenta-vnm4A.otf",
+      "target": "VideoKit-main\\fonts-local\\j Jacenta\\jJacenta-Regular.otf",
+      "sha256": "88428529aed54698744bc4e1a7f59c945475174fa403b3a00671ea140218d116"
+    },
+    {
+      "family": "j Jemur",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\j-jemur\\Jemur-9MY9y.otf",
+      "target": "VideoKit-main\\fonts-local\\j Jemur\\jJemur-Regular.otf",
+      "sha256": "1d398cb66fe467715594ba9fa9da9f09a5f4bb1fe52df2b1cdfcc4b3b40b1c4e"
+    },
+    {
+      "family": "Kissing Season",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\kissing-season\\KissingSeason-pgpKd.ttf",
+      "target": "VideoKit-main\\fonts-local\\Kissing Season\\KissingSeason-Regular.ttf",
+      "sha256": "946e1d1e51ca1f46531b31760a70e967daaf690a564d54dbe47958ecd7cf2a26"
+    },
+    {
+      "family": "Lakon Rokum Trial",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\lakon-rokum\\LakonrokumtrialRegular-9M5DB.otf",
+      "target": "VideoKit-main\\fonts-local\\Lakon Rokum Trial\\LakonRokumTrial-Regular.otf",
+      "sha256": "098afe0e02f515c617d7b399f889d9e32c49377b9fdad51d780219c25bc97edf"
+    },
+    {
+      "family": "Leander",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\leander\\Leander-5Bmj.ttf",
+      "target": "VideoKit-main\\fonts-local\\Leander\\Leander-Regular.ttf",
+      "sha256": "29e6c7736f485bb95cd6f75c4b68722fa045cc9113c64a7baf2674dc267f0260"
+    },
+    {
+      "family": "LittleMissPriss",
+      "style": "Medium",
+      "weight": "500",
+      "source": "fonts\\personal\\littlemisspriss\\Littlemisspriss-LPlW.ttf",
+      "target": "VideoKit-main\\fonts-local\\LittleMissPriss\\LittleMissPriss-Medium.ttf",
+      "sha256": "36e8e6bb5590f937579d652cbaaa6b3b76187a0ddc685df67064c41163f992f9"
+    },
+    {
+      "family": "Love Letters",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\love-letters\\LoveLetters-vAMZ.ttf",
+      "target": "VideoKit-main\\fonts-local\\Love Letters\\LoveLetters-Regular.ttf",
+      "sha256": "002d18ae0a8d24358350987a76e27f00f1e0473c027958e8b3f79c7d09b24948"
+    },
+    {
+      "family": "Magic Saturday",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\magic-saturday\\MagicSaturday-rg1OA.ttf",
+      "target": "VideoKit-main\\fonts-local\\Magic Saturday\\MagicSaturday-Regular.ttf",
+      "sha256": "56db2ece5b08eaede4e8639caa457fcb1d960da4370411a6b6e97691114e5515"
+    },
+    {
+      "family": "MGF Pinlock Personal Use",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\mgf-pinlock\\MgfPinlockPersonalUse-wo5pw.otf",
+      "target": "VideoKit-main\\fonts-local\\MGF Pinlock Personal Use\\MGFPinlockPersonalUse-Regular.otf",
+      "sha256": "fe768234f0d4b3f773cf80d3c1ff5bb2ca349463eb95828bdda22c2508f9996b"
+    },
+    {
+      "family": "Mintmolly",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\mintmolly\\Mintmolly-gx1w5.ttf",
+      "target": "VideoKit-main\\fonts-local\\Mintmolly\\Mintmolly-Regular.ttf",
+      "sha256": "f1a33c454af13aef0bf46959a77cb2d57699570bbf40b06b96488a28f6ca957e"
+    },
+    {
+      "family": "Mintmolly",
+      "style": "Italic",
+      "weight": "400",
+      "source": "fonts\\personal\\mintmolly\\MintmollyItalic-L31VG.ttf",
+      "target": "VideoKit-main\\fonts-local\\Mintmolly\\Mintmolly-Regular-Italic.ttf",
+      "sha256": "41d1567076e5d5e7642eb1b43558914688bc0c7b7115df5ab84877ce068eb910"
+    },
+    {
+      "family": "Mouldy Cheese",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\mouldy-cheese\\MouldyCheeseRegular-WyMWG.ttf",
+      "target": "VideoKit-main\\fonts-local\\Mouldy Cheese\\MouldyCheese-Regular.ttf",
+      "sha256": "8abc4c342dc77bdc24b78923ac36215204322c2a5c15f20cbd4a8324d9e9420a"
+    },
+    {
+      "family": "Olibrick",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\olibrick-2\\misc\\Olibrick-c72a.woff",
+      "target": "VideoKit-main\\fonts-local\\Olibrick\\Olibrick-Regular.woff",
+      "sha256": "8a95ebbd2a147c01554b688578248b3230df88fbfdd74dabae0e681ba9cc82a7"
+    },
+    {
+      "family": "Opsilon",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\opsilon\\Opsilon-xRj8m.ttf",
+      "target": "VideoKit-main\\fonts-local\\Opsilon\\Opsilon-Regular.ttf",
+      "sha256": "93ce3c2c66ecd9b3ac9a1f9d8d03b50883ec6d5a7087eb73edf13417486005d5"
+    },
+    {
+      "family": "Opsilon",
+      "style": "Italic",
+      "weight": "400",
+      "source": "fonts\\personal\\opsilon\\OpsilonItalic-3lm9p.ttf",
+      "target": "VideoKit-main\\fonts-local\\Opsilon\\Opsilon-Regular-Italic.ttf",
+      "sha256": "67f0bdb3490ac42e4f00b21d8b68e0337127fe1005e1391bf0d2216f74c11791"
+    },
+    {
+      "family": "Origins Christmas",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\origins-christmas\\OriginsChristmas-BLP65.otf",
+      "target": "VideoKit-main\\fonts-local\\Origins Christmas\\OriginsChristmas-Regular.otf",
+      "sha256": "9c2edc2b5a50dab3477ea67a3c91d1920a8fb6215ded057301f321631b9f5cbd"
+    },
+    {
+      "family": "Pinko",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\pinko\\Pinko-j99pl.ttf",
+      "target": "VideoKit-main\\fonts-local\\Pinko\\Pinko-Regular.ttf",
+      "sha256": "3b042792ef30cc7f0bc85e9acfd069dc2a1aef78e329350590fd82fc23827dee"
+    },
+    {
+      "family": "Postbook",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\postbook\\Postbook-0vojG.ttf",
+      "target": "VideoKit-main\\fonts-local\\Postbook\\Postbook-Regular.ttf",
+      "sha256": "35cb6d4a14ce681341489814e8f47a4ee0d1952069f3acba4813a6e72d65ad40"
+    },
+    {
+      "family": "Radion",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\radion\\Radion-OVjgp.ttf",
+      "target": "VideoKit-main\\fonts-local\\Radion\\Radion-Regular.ttf",
+      "sha256": "824f62e837ae9f9833bfc9fe94b122a6773c883e6cceb941aba9152fe5f40d62"
+    },
+    {
+      "family": "Rainbow Sans",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\rainbow-sans\\RainbowSans-9Y00K.otf",
+      "target": "VideoKit-main\\fonts-local\\Rainbow Sans\\RainbowSans-Regular.otf",
+      "sha256": "4c52a4938995a1b5dda293ffa13e29c6a422730bcd041cac14eb024d96c86b2b"
+    },
+    {
+      "family": "Rainbow Sans Bold",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\rainbow-sans\\RainbowSansBold-lgEEd.otf",
+      "target": "VideoKit-main\\fonts-local\\Rainbow Sans Bold\\RainbowSansBold-Regular.otf",
+      "sha256": "3ede3db1bca307d8a8c98d1afdac2355f5537dede7ace7c1e83a9d4593f69cb2"
+    },
+    {
+      "family": "Rainbow Sans Color",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\rainbow-sans\\RainbowSansColor-nREEg.otf",
+      "target": "VideoKit-main\\fonts-local\\Rainbow Sans Color\\RainbowSansColor-Regular.otf",
+      "sha256": "55298b228af98c55b0230592d961aeb2899c2f05989c3fa0c08b32d25bee486b"
+    },
+    {
+      "family": "Robin Chandler Demo",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\robin-chandler\\RobinChandlerDemo-WpewO.ttf",
+      "target": "VideoKit-main\\fonts-local\\Robin Chandler Demo\\RobinChandlerDemo-Regular.ttf",
+      "sha256": "2809c382e05225428494e4312824e03277967fe60b8ffc0980447a35bb52cd2b"
+    },
+    {
+      "family": "Rushford Printed",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\rushford-printed\\RushfordPrinted-MVnDe.otf",
+      "target": "VideoKit-main\\fonts-local\\Rushford Printed\\RushfordPrinted-Regular.otf",
+      "sha256": "bcb140176da86efb413730ef817d71c17c82e8b2667bd21b7531930c7e2405b8"
+    },
+    {
+      "family": "Sacrifice Demo",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\sacrifice\\SacrificeDemo-8Ox1B.ttf",
+      "target": "VideoKit-main\\fonts-local\\Sacrifice Demo\\SacrificeDemo-Regular.ttf",
+      "sha256": "cba81c542064104a6ea6f951778f0e9cc8732df6600fa6c394c212772b5b54a3"
+    },
+    {
+      "family": "Keraleeyam",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\smc-keraleeyam\\Keraleeyam-Regular.ttf",
+      "target": "VideoKit-main\\fonts-local\\Keraleeyam\\Keraleeyam-Regular.ttf",
+      "sha256": "6c0c0aced0af3078473a405864ba86e85b9c62ab53f0c03a2815c4096c73d56a"
+    },
+    {
+      "family": "Rachana",
+      "style": "Bold",
+      "weight": "700",
+      "source": "fonts\\personal\\smc-rachana\\ttf\\Rachana-Bold.ttf",
+      "target": "VideoKit-main\\fonts-local\\Rachana\\Rachana-Bold.ttf",
+      "sha256": "b4ec5fae2950825a6f807afdd05edf3dd4aaf6519e4641e21c8567cbf1ede7b8"
+    },
+    {
+      "family": "Rachana",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\smc-rachana\\ttf\\Rachana-Regular.ttf",
+      "target": "VideoKit-main\\fonts-local\\Rachana\\Rachana-Regular.ttf",
+      "sha256": "b20cde573e9a5cba55492915156f715bd75cff9897fd50d220fbc8d52256e90b"
+    },
+    {
+      "family": "Uroob",
+      "style": "Bold",
+      "weight": "700",
+      "source": "fonts\\personal\\smc-uroob\\ttf\\Uroob.ttf",
+      "target": "VideoKit-main\\fonts-local\\Uroob\\Uroob-Bold.ttf",
+      "sha256": "45a29966508be9dd27c8925f72547201b49361529e64bc084efe5ff9371fd4f4"
+    },
+    {
+      "family": "Sparky Stones",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\sparky-stones\\SparkyStonesRegular-BW6ld.ttf",
+      "target": "VideoKit-main\\fonts-local\\Sparky Stones\\SparkyStones-Regular.ttf",
+      "sha256": "68f086509f57eda1409940ea28a3c0955f8c0c6bf339c35369b77ab1c4981263"
+    },
+    {
+      "family": "SPEARHEAD",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\spearhead\\misc\\SPEARHEAD.woff",
+      "target": "VideoKit-main\\fonts-local\\SPEARHEAD\\SPEARHEAD-Regular.woff",
+      "sha256": "5f28dbfe039883e3fb13235a5f6b78394401d16c3f86744aa973f8b184d4da1b"
+    },
+    {
+      "family": "Spooky Winter",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\spooky-winter\\SpookyWinter-8OYGD.otf",
+      "target": "VideoKit-main\\fonts-local\\Spooky Winter\\SpookyWinter-Regular.otf",
+      "sha256": "65bd39e9d249f982c77b19e4543f1ddb0a2a98eb510de4d9bb63fd4dfd4b6521"
+    },
+    {
+      "family": "Super Brain",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\super-brain\\SuperBrain-yYjL2.ttf",
+      "target": "VideoKit-main\\fonts-local\\Super Brain\\SuperBrain-Regular.ttf",
+      "sha256": "82feb3bb6fae9f913cda82d39f0f740b30cdd5f7ed6dce54bc4b0d1c99cc0c7f"
+    },
+    {
+      "family": "Super Wild",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\super-wild\\SuperWild-nAX0J.ttf",
+      "target": "VideoKit-main\\fonts-local\\Super Wild\\SuperWild-Regular.ttf",
+      "sha256": "4278543346100d28b84372b99a00ecc63dd1c70100ad6ada33a9fa0210ae5cba"
+    },
+    {
+      "family": "Valentine Cupcake",
+      "style": "Regular",
+      "weight": "400",
+      "source": "fonts\\personal\\valentine-cupcake\\ValentineCupcake-e9ZJB.ttf",
+      "target": "VideoKit-main\\fonts-local\\Valentine Cupcake\\ValentineCupcake-Regular.ttf",
+      "sha256": "2a7ea2477947750ae65a103340636d80e5fc26ecc456061d5be39fa45f8944a0"
+    }
+  ]
+}

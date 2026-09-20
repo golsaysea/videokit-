@@ -1,0 +1,12 @@
+{
+  "SourceHanSerifSC-Bold.otf": {
+    "family": "Source Han Serif SC",
+    "weight": "700",
+    "style": "normal"
+  },
+  "SourceHanSerifSC-Regular.otf": {
+    "family": "Source Han Serif SC",
+    "weight": "400",
+    "style": "normal"
+  }
+}

@@ -1,0 +1,199 @@
+{
+  "name": "videokit",
+  "version": "4.4.39",
+  "description": "视频工具包-批量：音频生成-reels视频制作-多媒体转换",
+  "author": {
+    "name": "TimCode",
+    "email": "videokit@example.com"
+  },
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "prebuild": "node scripts/pre-build-check.js",
+    "build": "vite build",
+    "build:web": "vite build",
+    "build:desktop": "npm run build && electron-builder",
+    "build:all": "npm run build && echo '✅ 网站版本已生成到 dist/' && electron-builder && echo '✅ 桌面版本已生成到 dist-electron/'",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:${VITE_PORT:-5173} && node scripts/run-electron-dev.js\"",
+    "electron:build": "npm run build && electron-builder",
+    "start": "npm run electron:dev",
+    "test": "node --test tests/*.test.js",
+    "pack:mac-arm64": "npm run build && electron-builder --mac --arm64 -c.mac.artifactName=\"\\${productName}-\\${version}-macOS M-series (arm64).\\${ext}\"",
+    "pack:mac-x64": "npm run build && electron-builder --mac --x64 -c.mac.artifactName=\"\\${productName}-\\${version}-macOS Intel (x64).\\${ext}\"",
+    "pack:mac-universal": "npm run build && electron-builder --mac --arm64 --x64",
+    "pack:win-x64": "npm run build && electron-builder --win --x64 -c.win.artifactName=\"\\${productName}-Setup-\\${version}-Windows (win).\\${ext}\"",
+    "pack:linux-x64": "npm run build && electron-builder --linux --x64 -c.linux.artifactName=\"\\${productName}-\\${version}-Linux (linux).\\${ext}\"",
+    "pack:all": "npm run build && electron-builder --mac --arm64 -c.mac.artifactName=\"\\${productName}-\\${version}-macOS M-series (arm64).\\${ext}\" && electron-builder --mac --x64 -c.mac.artifactName=\"\\${productName}-\\${version}-macOS Intel (x64).\\${ext}\" && electron-builder --win --x64 -c.win.artifactName=\"\\${productName}-Setup-\\${version}-Windows (win).\\${ext}\" && electron-builder --linux --x64 -c.linux.artifactName=\"\\${productName}-\\${version}-Linux (linux).\\${ext}\""
+  },
+  "dependencies": {
+    "@google/genai": "^1.50.1",
+    "archiver": "^7.0.1",
+    "axios": "^1.15.0",
+    "diff-match-patch": "^1.0.5",
+    "electron-store": "^8.1.0",
+    "electron-updater": "^6.8.3",
+    "extract-zip": "^2.0.1",
+    "node-web-audio-api": "^1.0.8"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "electron": "^33.4.11",
+    "electron-builder": "^26.8.1",
+    "shell-quote": "^1.8.4",
+    "vite": "^5.0.0",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.timcode.videokit",
+    "productName": "VideoKit",
+    "npmRebuild": true,
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "secure-artifacts",
+        "repo": "VideoKit"
+      }
+    ],
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "assets/icon.icns",
+      "extraResources": [
+        {
+          "from": "backend",
+          "to": "backend",
+          "filter": [
+            "**/*.json",
+            "!uploads/**",
+            "!**/__pycache__/**",
+            "!*.py",
+            "!elevenlabs_settings.json",
+            "!gladia_keys.json",
+            "!gemini_keys.json",
+            "!transcription_providers.json"
+          ]
+        },
+        {
+          "from": "assets",
+          "to": "assets",
+          "filter": [
+            "**/*"
+          ]
+        },
+        {
+          "from": "vendor/darwin/ffmpeg",
+          "to": "vendor/ffmpeg",
+          "filter": [
+            "**/*"
+          ]
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ],
+      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "icon": "assets/icon.ico",
+      "extraResources": [
+        {
+          "from": "backend",
+          "to": "backend",
+          "filter": [
+            "**/*.json",
+            "!uploads/**",
+            "!**/__pycache__/**",
+            "!*.py",
+            "!elevenlabs_settings.json",
+            "!gladia_keys.json",
+            "!gemini_keys.json",
+            "!transcription_providers.json"
+          ]
+        },
+        {
+          "from": "assets",
+          "to": "assets",
+          "filter": [
+            "**/*"
+          ]
+        },
+        {
+          "from": "vendor/windows/ffmpeg",
+          "to": "vendor/ffmpeg",
+          "filter": [
+            "**/*"
+          ]
+        },
+        {
+          "from": "vendor/windows/python",
+          "to": "vendor/python",
+          "filter": [
+            "*.exe",
+            "*.dll",
+            "*.pyd",
+            "*.zip",
+            "*.pth",
+            "LICENSE.txt",
+            "python.cat",
+            "Lib/site-packages/yt_dlp/**/*",
+            "Lib/site-packages/yt_dlp*/**/*",
+            "Lib/site-packages/certifi/**/*",
+            "Lib/site-packages/urllib3/**/*",
+            "Lib/site-packages/requests/**/*",
+            "Lib/site-packages/charset_normalizer/**/*",
+            "Lib/site-packages/idna/**/*",
+            "Lib/site-packages/brotli*/**/*",
+            "Lib/site-packages/websockets/**/*",
+            "Lib/site-packages/mutagen/**/*",
+            "Lib/site-packages/pycryptodomex/**/*",
+            "!**/__pycache__/**",
+            "!**/test/**",
+            "!**/tests/**"
+          ]
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb",
+        "tar.gz"
+      ],
+      "icon": "assets/icon.png",
+      "category": "AudioVideo",
+      "extraResources": [
+        {
+          "from": "backend",
+          "to": "backend",
+          "filter": [
+            "**/*.json",
+            "!uploads/**",
+            "!**/__pycache__/**",
+            "!*.py",
+            "!elevenlabs_settings.json",
+            "!gladia_keys.json",
+            "!gemini_keys.json",
+            "!transcription_providers.json"
+          ]
+        },
+        {
+          "from": "assets",
+          "to": "assets",
+          "filter": [
+            "**/*"
+          ]
+        }
+      ]
+    }
+  }
+}

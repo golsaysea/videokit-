@@ -1,0 +1,12 @@
+{
+  "Lato-Bold.ttf": {
+    "family": "Lato",
+    "weight": "700",
+    "style": "normal"
+  },
+  "Lato-Regular.ttf": {
+    "family": "Lato",
+    "weight": "400",
+    "style": "normal"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "Poppins-Bold.ttf": {
+    "family": "Poppins",
+    "weight": "700",
+    "style": "normal"
+  },
+  "Poppins-Regular.ttf": {
+    "family": "Poppins",
+    "weight": "400",
+    "style": "normal"
+  }
+}

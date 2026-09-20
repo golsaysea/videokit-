@@ -1,0 +1,430 @@
+/**
+ * 一键配音工作流服务
+ * 替代 Python elevenlabs_tts_workflow
+ * 生成音频 + 智能拆分 + 字幕对齐 + 黑屏MP4
+ */
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const elevenlabs = require('./elevenlabs');
+const ffmpeg = require('./ffmpeg');
+const gladia = require('./gladia');
+const cloudTranscription = require('./cloudTranscription');
+const settings = require('./settings');
+
+function expandHomePath(p) {
+    if (!p || typeof p !== 'string') return '';
+    if (p === '~') return os.homedir();
+    if (p.startsWith('~/') || p.startsWith('~\\')) {
+        return path.join(os.homedir(), p.slice(2));
+    }
+    return p;
+}
+
+function normalizeTailSilenceSeconds(value) {
+    const seconds = parseFloat(value);
+    if (!Number.isFinite(seconds) || seconds <= 0) return 0;
+    return Math.max(0.1, Math.min(5, seconds));
+}
+
+function buildWorkflowBatchFolderName(date = new Date()) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    const hh = String(date.getHours()).padStart(2, '0');
+    const mm = String(date.getMinutes()).padStart(2, '0');
+    return `${y}-${m}-${d}_${hh}${mm}_一键配音`;
+}
+
+function sanitizeWorkflowGroupName(groupName) {
+    return String(groupName || '')
+        .replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')
+        .replace(/^\.+$/, '_')
+        .trim()
+        .slice(0, 100);
+}
+
+function appendWorkflowGroupToTaskPrefix(taskPrefix, groupName) {
+    const safeGroupName = sanitizeWorkflowGroupName(groupName);
+    if (!safeGroupName) return taskPrefix;
+    const numberedPrefix = String(taskPrefix).match(/^(\d+-)(.*)$/);
+    return numberedPrefix
+        ? `${numberedPrefix[1]}${safeGroupName}_${numberedPrefix[2]}`
+        : `${safeGroupName}_${taskPrefix}`;
+}
+
+function resolveWorkflowOutputGroups(outputDir, taskPrefix, groupName = '') {
+    const safeGroupName = sanitizeWorkflowGroupName(groupName);
+    const groupParts = safeGroupName ? [safeGroupName] : [];
+    return {
+        safeGroupName,
+        videoGroup: path.join(outputDir, '_视频文案', ...groupParts),
+        audioGroup: path.join(outputDir, '_音频字幕', ...groupParts),
+        metadataGroup: path.join(outputDir, '_metadata', ...groupParts, taskPrefix),
+    };
+}
+
+async function appendTailSilenceToMp3(filePath, seconds, tempDir, baseName) {
+    const tailSeconds = normalizeTailSilenceSeconds(seconds);
+    if (!tailSeconds) return false;
+
+    const tmpPath = path.join(tempDir, `${baseName}_tail_silence_tmp.mp3`);
+    await ffmpeg.runCommand('ffmpeg', [
+        '-y',
+        '-i', filePath,
+        '-af', `apad=pad_dur=${tailSeconds.toFixed(3)}`,
+        '-c:a', 'libmp3lame',
+        '-b:a', '192k',
+        '-ac', '2',
+        tmpPath,
+    ]);
+    fs.copyFileSync(tmpPath, filePath);
+    try { fs.unlinkSync(tmpPath); } catch (_) { }
+    console.log(`[一键配音] 已在 MP3 末尾追加静音 ${tailSeconds.toFixed(1)} 秒`);
+    return true;
+}
+
+async function generateWorkflowSubtitles({ sourcePath, subtitleText, outputDir, taskPrefix, groupName = '', gladiaKeys, language, exportFcpxml = true, seamlessFcpxml = true, exportSubtitleTxt = true }) {
+    if (!sourcePath || !fs.existsSync(sourcePath)) throw new Error('已生成的配音文件不存在');
+    if (!subtitleText || !String(subtitleText).trim()) throw new Error('字幕文案为空');
+    const transcriptionConfig = settings.loadTranscriptionProviders();
+    if (!Object.values(transcriptionConfig.providers || {}).some(provider => provider.keys?.length)) {
+        throw new Error('未配置 Deepgram 或 Groq API Key，请在设置中配置后再试');
+    }
+
+    const { videoGroup, audioGroup, metadataGroup } = resolveWorkflowOutputGroups(
+        outputDir, taskPrefix, groupName
+    );
+    fs.mkdirSync(videoGroup, { recursive: true });
+    fs.mkdirSync(audioGroup, { recursive: true });
+    fs.mkdirSync(metadataGroup, { recursive: true });
+
+    const subtitleTxtPath = exportSubtitleTxt
+        ? path.join(videoGroup, `${taskPrefix}.txt`)
+        : path.join(metadataGroup, `${taskPrefix}_source_text.tmp.txt`);
+    fs.writeFileSync(subtitleTxtPath, subtitleText, 'utf-8');
+    const fileName = path.parse(sourcePath).name;
+    const arrayPath = path.join(metadataGroup, `${fileName}_audio_text_withtime.json`);
+    const textPath = path.join(metadataGroup, `${fileName}_transcription.txt`);
+    const result = await cloudTranscription.transcribeWithFallback(sourcePath, transcriptionConfig, language, arrayPath, textPath, 5.0);
+    fs.writeFileSync(arrayPath, JSON.stringify(result.wordTimeInfo, null, 4), 'utf-8');
+    if (exportSubtitleTxt) fs.writeFileSync(textPath, result.fullText, 'utf-8');
+
+    const subtitleUtils = require('./subtitleUtils');
+    const { audioSubtitleSearchDifferentStrong } = require('./subtitleAlignment');
+    let langCode = 'en';
+    for (const [code, info] of Object.entries(subtitleUtils.LANGUAGES || {})) {
+        if (info.name === language || info.code === language || info.language === language) { langCode = code; break; }
+    }
+    const sourceTextWithInfo = subtitleUtils.readTextWithGoogleDoc(subtitleTxtPath);
+    const targetSrtPath = path.join(audioGroup, `${taskPrefix}.srt`);
+    const targetFcpxmlPath = exportFcpxml ? path.join(audioGroup, `${taskPrefix}.fcpxml`) : null;
+    try {
+        const alignResult = audioSubtitleSearchDifferentStrong(
+            langCode, audioGroup, taskPrefix, result.wordTimeInfo, result.fullText,
+            sourceTextWithInfo, {}, false, true, exportFcpxml, seamlessFcpxml,
+            targetSrtPath, targetFcpxmlPath
+        );
+        if (typeof alignResult === 'string' && !alignResult.startsWith('生成了字幕文件')) {
+            throw new Error(`字幕对齐失败: ${alignResult}`);
+        }
+        if (!fs.existsSync(targetSrtPath)) throw new Error('字幕对齐完成，但没有生成 SRT 文件');
+    } finally {
+        if (!exportSubtitleTxt) {
+            try { fs.unlinkSync(subtitleTxtPath); } catch (_) { }
+        }
+    }
+    return {
+        srt_path: targetSrtPath,
+        subtitle_txt_path: exportSubtitleTxt ? subtitleTxtPath : null,
+        fcpxml_path: targetFcpxmlPath,
+        // 供前端展示实际识别内容，方便判断如 "fourth" 被识别成 "4th" 的差异。
+        recognized_text: result.fullText || ''
+    };
+}
+
+/**
+ * 一键配音工作流
+ */
+async function ttsWorkflow(data) {
+    const {
+        text, voice_id, task_index = 0,
+        need_split: rawNeedSplit = true,
+        max_duration = 29.0,
+        subtitle_text = '',
+        bgm_path = '',
+        bgm_volume = 0.12,
+        export_mp4 = false,
+        export_fcpxml = true,
+        seamless_fcpxml = true,
+        model_id = 'eleven_v3',
+        stability = 0.5,
+        output_format = 'mp3_44100_128',
+        tail_silence = 0,
+        key_index = null,
+        output_dir: rawOutputDir = '',
+        group_name = '',
+        export_subtitle_txt = true,
+        gladia_keys = null,
+        language = 'english'
+    } = data;
+
+    if (!text || !voice_id) throw new Error('缺少必要参数');
+
+    // 兜底互斥：黑屏 MP4 模式下不进行智能拆分
+    let needSplit = rawNeedSplit;
+    if (export_mp4 && needSplit) {
+        console.log(`[一键配音] task_index=${task_index} 检测到 mp4+split 同时开启，已强制关闭拆分`);
+        needSplit = false;
+    }
+
+    const edge = String(voice_id).startsWith('edge:');
+    if (data.tts_provider === 'edge' && !edge) throw new Error('微软配音需要选择 edge: 开头的音色');
+    const apiKeys = edge ? [] : elevenlabs.loadKeys();
+    if (!edge && (!apiKeys || apiKeys.length === 0)) throw new Error('未配置 ElevenLabs API Key');
+
+    if (subtitle_text && !edge) {
+        const transcriptionConfig = settings.loadTranscriptionProviders();
+        if (!Object.values(transcriptionConfig.providers || {}).some(provider => provider.keys?.length)) {
+            throw new Error('未配置 Deepgram 或 Groq API Key！任务被拒绝，以防浪费 TTS 额度（请在设置中配置）');
+        }
+    }
+
+    // 创建输出文件夹
+    const today = new Date();
+    let outputDir = rawOutputDir.trim();
+    if (!outputDir) {
+        outputDir = path.join(os.homedir(), 'Downloads', buildWorkflowBatchFolderName(today));
+    }
+    fs.mkdirSync(outputDir, { recursive: true });
+
+    // 提取文本前缀作为文件名
+    const cleanText = text.replace(/[<>]/g, '').replace(/\[[^\]]+\]/g, '').replace(/[\[\]()]/g, '');
+    let textPrefix = cleanText.split(/\s+/).slice(0, 15).join('_').slice(0, 60);
+    textPrefix = textPrefix.replace(/[^a-zA-Z0-9\u4e00-\u9fff _-]/g, '').replace(/\s+/g, '_').trim();
+    if (!textPrefix) textPrefix = 'audio';
+
+    const dateSuffix = `${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+    const baseTaskPrefix = `${String(task_index + 1).padStart(2, '0')}-${textPrefix}_${dateSuffix}`;
+    const safeGroupName = sanitizeWorkflowGroupName(group_name);
+    const taskPrefix = appendWorkflowGroupToTaskPrefix(baseTaskPrefix, safeGroupName);
+
+    // 创建分组目录
+    const { videoGroup, audioGroup, metadataGroup } = resolveWorkflowOutputGroups(
+        outputDir, taskPrefix, safeGroupName
+    );
+    fs.mkdirSync(videoGroup, { recursive: true });
+    fs.mkdirSync(audioGroup, { recursive: true });
+    fs.mkdirSync(metadataGroup, { recursive: true });
+
+    // Step 1: 生成音频
+    const stabilityVal = Math.max(0, Math.min(1, parseFloat(stability) > 1 ? parseFloat(stability) / 100 : parseFloat(stability)));
+    // 统一导出命名：同一任务使用同一 basename（.mp3/.txt/.srt）
+    const synthesis = edge
+        ? await require('./edgeTts').synthesize(text, voice_id, data.edge_rate || '+0%')
+        : await elevenlabs.requestTTSWithRotation(apiKeys, voice_id, text, model_id, stabilityVal, output_format, key_index);
+    const { audio, usedKey } = synthesis;
+    console.log(`[一键配音] 任务 ${task_index + 1} TTS 生成完成`);
+
+    const sourcePath = path.join(audioGroup, `${taskPrefix}.mp3`);
+    fs.writeFileSync(sourcePath, audio);
+
+    const bgmPath = expandHomePath(String(bgm_path || '').trim());
+    if (bgmPath) {
+        if (!fs.existsSync(bgmPath)) {
+            throw new Error(`配乐文件不存在: ${bgmPath}`);
+        }
+        const bgmGain = Math.max(0, Math.min(2, parseFloat(bgm_volume)));
+        const safeBgmGain = Number.isFinite(bgmGain) ? bgmGain : 0.12;
+        const mixedTempPath = path.join(metadataGroup, `${taskPrefix}_mixed_tmp.mp3`);
+        await ffmpeg.runCommand('ffmpeg', [
+            '-y',
+            '-i', sourcePath,
+            '-stream_loop', '-1',
+            '-i', bgmPath,
+            '-filter_complex',
+            `[0:a]volume=1.000[voice];[1:a]volume=${safeBgmGain.toFixed(3)}[bgm];[voice][bgm]amix=inputs=2:duration=first:dropout_transition=0:normalize=0[aout]`,
+            '-map', '[aout]',
+            '-c:a', 'libmp3lame',
+            '-b:a', '192k',
+            '-ac', '2',
+            mixedTempPath,
+        ]);
+        fs.copyFileSync(mixedTempPath, sourcePath);
+        try { fs.unlinkSync(mixedTempPath); } catch (_) { }
+    }
+
+    await appendTailSilenceToMp3(sourcePath, tail_silence, metadataGroup, taskPrefix);
+
+    let segments = [];
+
+    // Step 2: 智能拆分（使用 FFmpeg 静音检测替代 pydub + numpy）
+    if (needSplit) {
+        try {
+            const totalDuration = await ffmpeg.getDuration(sourcePath);
+            if (totalDuration && totalDuration > max_duration) {
+                const splitResult = await ffmpeg.smartSplitAnalyze(sourcePath, max_duration);
+
+                // 导出分段
+                for (let i = 0; i < splitResult.segments.length; i++) {
+                    const seg = splitResult.segments[i];
+                    const partPath = path.join(audioGroup, `${taskPrefix}-part_${String(i + 1).padStart(2, '0')}.mp3`);
+
+                    await ffmpeg.runCommand('ffmpeg', [
+                        '-y', '-i', sourcePath,
+                        '-ss', seg.start.toFixed(3),
+                        '-t', (seg.end - seg.start).toFixed(3),
+                        '-c:a', 'libmp3lame', '-b:a', '192k',
+                        partPath
+                    ]);
+
+                    segments.push({
+                        index: i + 1,
+                        start: seg.start,
+                        end: seg.end,
+                        path: partPath,
+                    });
+                }
+            } else if (totalDuration) {
+                segments = [{ index: 1, start: 0, end: totalDuration, path: sourcePath }];
+            }
+        } catch (e) {
+            console.error('拆分失败:', e);
+        }
+    }
+
+    // Step 3: 生成字幕
+    let srtPath = null;
+    let subtitleTxtPath = null;
+    let subtitleError = null;
+    let subtitleResult = null;
+    if (edge) {
+        // Edge's own sentence timings correspond to the spoken text; no recognition key is required.
+        if (synthesis.srt) {
+            srtPath = path.join(metadataGroup, taskPrefix + '.srt');
+            fs.writeFileSync(srtPath, synthesis.srt, 'utf8');
+        } else {
+            subtitleError = '微软返回了音频，但没有字幕时间戳，可稍后单独对齐字幕';
+        }
+        if (export_subtitle_txt !== false) {
+            subtitleTxtPath = path.join(metadataGroup, taskPrefix + '.txt');
+            fs.writeFileSync(subtitleTxtPath, text, 'utf8');
+        }
+    } else if (subtitle_text) {
+        try {
+            subtitleResult = await generateWorkflowSubtitles({
+                sourcePath, subtitleText: subtitle_text, outputDir, taskPrefix,
+                groupName: safeGroupName,
+                gladiaKeys: gladia_keys, language, exportFcpxml: export_fcpxml,
+                seamlessFcpxml: seamless_fcpxml,
+                exportSubtitleTxt: export_subtitle_txt !== false,
+            });
+            srtPath = subtitleResult.srt_path;
+            subtitleTxtPath = subtitleResult.subtitle_txt_path;
+        } catch (e) {
+            console.error('字幕生成失败:', e);
+            subtitleError = e.message || String(e);
+        }
+    }
+
+    // Step 4: 生成黑屏 MP4（如果需要）
+    let mp4Path = null;
+    if (export_mp4) {
+        mp4Path = path.join(videoGroup, `${taskPrefix}.mp4`);
+        await ffmpeg.generateBlackMp4(sourcePath, mp4Path);
+    }
+
+    return {
+        audio_path: sourcePath,
+        subtitle_txt_path: subtitleTxtPath,
+        srt_path: srtPath,
+        bgm_path: bgmPath || null,
+        output_folder: outputDir,
+        group_name: safeGroupName,
+        task_prefix: taskPrefix,
+        mp4_path: mp4Path,
+        segments,
+        segment_count: segments.length,
+        used_key: usedKey,
+        tts_provider: edge ? 'edge' : 'elevenlabs',
+        partial_success: Boolean(subtitleError),
+        subtitle_error: subtitleError,
+        recognized_text: subtitleError ? '' : (subtitleResult?.recognized_text || ''),
+    };
+}
+
+async function retryWorkflowSubtitles(data) {
+    const outputDir = String(data.output_dir || '').trim();
+    const taskPrefix = String(data.task_prefix || '').trim();
+    if (!outputDir || !taskPrefix) throw new Error('缺少原任务输出信息，无法只重试字幕');
+    return await generateWorkflowSubtitles({
+        sourcePath: data.audio_path,
+        subtitleText: data.subtitle_text,
+        outputDir,
+        taskPrefix,
+        groupName: data.group_name || '',
+        gladiaKeys: data.gladia_keys,
+        language: data.language || 'english',
+        exportFcpxml: data.export_fcpxml !== false,
+        seamlessFcpxml: data.seamless_fcpxml !== false,
+        exportSubtitleTxt: data.export_subtitle_txt !== false,
+    });
+}
+
+/**
+ * 简化的 SRT 生成（基于 Gladia 转录结果和字幕文本）
+ */
+function generateSimpleSRT(wordTimeInfo, subtitleText, outputPath) {
+    const lines = subtitleText.split('\n').filter(l => l.trim());
+    if (lines.length === 0 || wordTimeInfo.length === 0) return;
+
+    // 收集所有单词
+    const allWords = [];
+    for (const utt of wordTimeInfo) {
+        for (const w of utt.words || []) {
+            allWords.push(w);
+        }
+    }
+
+    if (allWords.length === 0) return;
+
+    // 按字符顺序分配时间到每行
+    let wordIdx = 0;
+    const srtEntries = [];
+
+    for (let i = 0; i < lines.length; i++) {
+        const lineWords = lines[i].trim().split(/\s+/);
+        const wordsNeeded = lineWords.length;
+
+        if (wordIdx >= allWords.length) break;
+
+        const startTime = allWords[wordIdx].start;
+        const endWordIdx = Math.min(wordIdx + wordsNeeded - 1, allWords.length - 1);
+        let endTime = allWords[endWordIdx].end;
+
+        // 如果还有下一行，确保不会重叠
+        if (i < lines.length - 1 && endWordIdx + 1 < allWords.length) {
+            endTime = Math.min(endTime, allWords[endWordIdx + 1].start);
+        }
+
+        srtEntries.push({
+            index: i + 1,
+            start: Math.round(startTime * 1000),
+            end: Math.round(endTime * 1000),
+            text: lines[i].trim(),
+        });
+
+        wordIdx = endWordIdx + 1;
+    }
+
+    // 写入 SRT
+    const { writeSRT } = require('./subtitle');
+    writeSRT(srtEntries, outputPath);
+}
+
+module.exports = {
+    ttsWorkflow,
+    retryWorkflowSubtitles,
+    resolveWorkflowOutputGroups,
+    appendWorkflowGroupToTaskPrefix,
+};

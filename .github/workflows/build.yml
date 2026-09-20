@@ -1,0 +1,320 @@
+# pyMediaTools 跨平台自动打包
+# 触发条件：推送 tag (如 v2.1.0) 或手动触发
+
+name: 🚀 Build All Platforms
+
+on:
+  push:
+    branches:
+      - '*'
+    tags:
+      - 'v*'
+  
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号 (如 2.1.0)'
+        required: false
+        default: 'dev'
+      platform:
+        description: '选择打包平台'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - windows
+          - macos
+          - linux
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_EMBED_VERSION: "3.11.9"
+  FFMPEG_VERSION: "7.1"
+
+jobs:
+  # ==================== macOS 打包 ====================
+  build-mac:
+    name: 🍎 macOS (Intel + Apple Silicon)
+    runs-on: macos-latest
+    if: ${{ github.event_name == 'push' || inputs.platform == 'all' || inputs.platform == 'macos' }}
+    
+    steps:
+      - name: 📥 检出代码
+        uses: actions/checkout@v4
+      
+      - name: 📦 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: 🐍 下载 Python Standalone (ARM64)
+        run: |
+          echo "📥 下载 Python Standalone for macOS ARM64..."
+          mkdir -p vendor/darwin
+          curl -L -o /tmp/python-standalone.tar.gz \
+            "https://github.com/indygreg/python-build-standalone/releases/download/20241016/cpython-3.11.10+20241016-aarch64-apple-darwin-install_only.tar.gz"
+          
+          echo "📦 解压 Python..."
+          cd vendor/darwin
+          tar -xzf /tmp/python-standalone.tar.gz
+          rm /tmp/python-standalone.tar.gz
+          
+          echo "✅ Python 解压完成"
+          ls -la python/bin/
+      
+      - name: 🔧 安装 Python 依赖到打包目录
+        run: |
+          echo "🔧 安装 Python 后端依赖..."
+          ./vendor/darwin/python/bin/python3 -m pip install --upgrade pip
+          ./vendor/darwin/python/bin/python3 -m pip install \
+            flask flask-cors pydub requests pysrt diff-match-patch yt-dlp
+          
+          echo "🔍 验证安装:"
+          ./vendor/darwin/python/bin/python3 -c "import flask; from flask_cors import CORS; print('Flask version:', flask.__version__)"
+          ./vendor/darwin/python/bin/python3 -c "import diff_match_patch; print('diff-match-patch OK')"
+          ./vendor/darwin/python/bin/python3 -c "import pysrt; print('pysrt OK')"
+          
+          echo "✅ Python 依赖安装完成"
+      
+      - name: 🔧 安装 Node 依赖
+        run: npm ci
+      
+      - name: 🏗️ 构建前端
+        run: npm run build
+      
+      - name: 📦 打包 macOS (ARM64 + x64)
+        run: npx electron-builder --mac --arm64 --x64 --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: 📤 上传 macOS 产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-builds
+          path: |
+            dist-electron/*.dmg
+            dist-electron/*.zip
+            dist-electron/*.yml
+          retention-days: 30
+
+  # ==================== Windows 打包 ====================
+  build-windows:
+    name: 🪟 Windows (x64)
+    runs-on: windows-latest
+    if: ${{ github.event_name == 'push' || inputs.platform == 'all' || inputs.platform == 'windows' }}
+    
+    steps:
+      - name: 📥 检出代码
+        uses: actions/checkout@v4
+      
+      - name: 📦 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: 🐍 下载 Python Embedded
+        shell: pwsh
+        run: |
+          $pythonUrl = "https://www.python.org/ftp/python/${{ env.PYTHON_EMBED_VERSION }}/python-${{ env.PYTHON_EMBED_VERSION }}-embed-amd64.zip"
+          $pythonZip = "python-embed.zip"
+          
+          Write-Host "📥 下载 Python Embedded from $pythonUrl"
+          Invoke-WebRequest -Uri $pythonUrl -OutFile $pythonZip
+          
+          # 创建目录并解压
+          New-Item -ItemType Directory -Force -Path "vendor/windows/python"
+          Expand-Archive -Path $pythonZip -DestinationPath "vendor/windows/python" -Force
+          Remove-Item $pythonZip
+          
+          # 修改 python311._pth 启用 site-packages
+          $pthFile = "vendor/windows/python/python311._pth"
+          @"
+          python311.zip
+          .
+          Lib/site-packages
+          import site
+          "@ | Set-Content $pthFile -Encoding UTF8
+          
+          Write-Host "📄 python311._pth 内容:"
+          Get-Content $pthFile
+          
+          # 下载 get-pip.py
+          Write-Host "📥 下载 get-pip.py"
+          Invoke-WebRequest -Uri "https://bootstrap.pypa.io/get-pip.py" -OutFile "vendor/windows/python/get-pip.py"
+          
+          # 创建 site-packages 目录
+          New-Item -ItemType Directory -Force -Path "vendor/windows/python/Lib/site-packages"
+          
+          # 安装 pip
+          Write-Host "🔧 安装 pip"
+          & "vendor/windows/python/python.exe" "vendor/windows/python/get-pip.py" --no-warn-script-location
+          
+          # 安装依赖到 site-packages
+          Write-Host "🔧 安装 Python 依赖"
+          & "vendor/windows/python/python.exe" -m pip install flask flask-cors pydub requests pysrt diff-match-patch --target "vendor/windows/python/Lib/site-packages" --no-warn-script-location
+          
+          # 验证依赖安装
+          Write-Host "🔍 验证 Flask 和 flask-cors 安装:"
+          & "vendor/windows/python/python.exe" -c "import flask; from flask_cors import CORS; print('Flask version:', flask.__version__)"
+          
+          Write-Host "✅ Python Embedded 安装完成"
+          dir "vendor/windows/python"
+          dir "vendor/windows/python/Lib/site-packages"
+      
+      - name: 📥 下载 FFmpeg (Windows)
+        shell: pwsh
+        run: |
+          $ffmpegUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"
+          $ffmpegZip = "ffmpeg.zip"
+          
+          Write-Host "📥 下载 FFmpeg from $ffmpegUrl"
+          Invoke-WebRequest -Uri $ffmpegUrl -OutFile $ffmpegZip
+          
+          # 解压到临时目录
+          Expand-Archive -Path $ffmpegZip -DestinationPath "ffmpeg-temp" -Force
+          
+          # 创建目标目录并移动文件
+          New-Item -ItemType Directory -Force -Path "vendor/windows/ffmpeg/bin"
+          
+          # 找到解压后的目录（名称可能包含版本号）
+          $extractedDir = Get-ChildItem -Path "ffmpeg-temp" -Directory | Select-Object -First 1
+          Copy-Item "$($extractedDir.FullName)/bin/ffmpeg.exe" "vendor/windows/ffmpeg/bin/"
+          Copy-Item "$($extractedDir.FullName)/bin/ffprobe.exe" "vendor/windows/ffmpeg/bin/"
+          
+          # 清理
+          Remove-Item $ffmpegZip
+          Remove-Item -Recurse -Force "ffmpeg-temp"
+          
+          Write-Host "✅ FFmpeg 安装完成"
+          dir "vendor/windows/ffmpeg/bin"
+      
+      - name: 🔧 安装 Node 依赖
+        run: npm ci
+      
+      - name: 🏗️ 构建前端
+        run: npm run build
+      
+      - name: 📦 打包 Windows x64
+        run: npx electron-builder --win --x64 --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: 📤 上传 Windows 产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-builds
+          path: |
+            dist-electron/*.zip
+            dist-electron/*.exe
+            dist-electron/*.yml
+          retention-days: 30
+
+  # ==================== Linux 打包 ====================
+  build-linux:
+    name: 🐧 Linux (x64)
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' || inputs.platform == 'all' || inputs.platform == 'linux' }}
+    
+    steps:
+      - name: 📥 检出代码
+        uses: actions/checkout@v4
+      
+      - name: 📦 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: 🐍 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: 🔧 安装 Python 依赖
+        run: |
+          pip install flask flask-cors pydub requests pysrt diff-match-patch
+      
+      - name: 📥 下载 FFmpeg (Linux)
+        run: |
+          mkdir -p vendor/linux/ffmpeg/bin
+          
+          # 下载 BtbN 编译的 Linux x64 FFmpeg
+          wget -q https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz
+          tar -xf ffmpeg-master-latest-linux64-gpl.tar.xz
+          
+          # 复制二进制文件
+          FFMPEG_DIR="ffmpeg-master-latest-linux64-gpl"
+          cp "$FFMPEG_DIR/bin/ffmpeg" vendor/linux/ffmpeg/bin/
+          cp "$FFMPEG_DIR/bin/ffprobe" vendor/linux/ffmpeg/bin/
+          chmod +x vendor/linux/ffmpeg/bin/*
+          
+          # 清理
+          rm -rf ffmpeg-master-latest-linux64-gpl.tar.xz "$FFMPEG_DIR"
+          
+          echo "✅ FFmpeg 安装完成"
+          ls -la vendor/linux/ffmpeg/bin/
+      
+      - name: 🔧 安装 Node 依赖
+        run: npm ci
+      
+      - name: 🏗️ 构建前端
+        run: npm run build
+      
+      - name: 📦 打包 Linux x64
+        run: npx electron-builder --linux --x64 --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: 📤 上传 Linux 产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-builds
+          path: |
+            dist-electron/*.AppImage
+            dist-electron/*.deb
+            dist-electron/*.yml
+          retention-days: 30
+
+  # ==================== 创建 Release ====================
+  create-release:
+    name: 📢 创建 GitHub Release
+    needs: [build-mac, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    permissions:
+      id-token: write
+      contents: write
+      attestations: write
+    
+    steps:
+      - name: 📥 下载所有产物
+        uses: actions/download-artifact@v4
+        with:
+          path: all-builds
+          merge-multiple: true
+      
+      - name: 📋 列出文件
+        run: ls -la all-builds/
+
+      - name: 🧹 清理多余文件
+        run: |
+          rm -f all-builds/builder-debug.yml
+
+      - name: Attest Build Provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'all-builds/*'
+      
+      - name: 🎉 创建 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: all-builds/*
+          draft: false
+          generate_release_notes: true

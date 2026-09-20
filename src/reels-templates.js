@@ -1,0 +1,1164 @@
+/**
+ * reels-templates.js — 视频模板库 UI + 逻辑
+ * 
+ * 功能：
+ *   - 模板库面板（网格缩略图列表）
+ *   - 保存当前工程为模板
+ *   - 打开模板 → 独立编辑器窗口
+ *   - 删除/重命名模板
+ *   - 启动时检测 URL hash 自动加载模板
+ */
+
+// ═══════════════════════════════════════════════════════
+// 1. 模板库 Modal UI
+// ═══════════════════════════════════════════════════════
+
+function _tplEscapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[ch]));
+}
+
+let _currentTemplateContext = {
+    id: '',
+    name: '',
+};
+
+const TEMPLATE_CARD_SIZE_KEY = 'videokit_template_card_size';
+
+function _getTemplateCardSize() {
+    const stored = parseInt(localStorage.getItem(TEMPLATE_CARD_SIZE_KEY) || '240', 10);
+    return Number.isFinite(stored) ? Math.max(100, Math.min(360, stored)) : 240;
+}
+
+function _setTemplateCardSize(value) {
+    const size = Math.max(100, Math.min(360, parseInt(value, 10) || 240));
+    localStorage.setItem(TEMPLATE_CARD_SIZE_KEY, String(size));
+    const slider = document.getElementById('tpl-card-size-slider');
+    const label = document.getElementById('tpl-card-size-value');
+    const grid = document.getElementById('tpl-card-grid');
+    if (slider && Number(slider.value) !== size) slider.value = String(size);
+    if (label) label.textContent = `${size}px`;
+    if (grid) grid.style.setProperty('--tpl-card-size', `${size}px`);
+}
+
+function _setCurrentTemplateContext(id, name) {
+    _currentTemplateContext = {
+        id: id || '',
+        name: name || '',
+    };
+    _updateCurrentTemplateButton();
+}
+
+function _updateCurrentTemplateButton() {
+    const btn = document.getElementById('tpl-update-current-btn');
+    const label = document.getElementById('tpl-current-template-label');
+    if (btn) {
+        btn.disabled = !_currentTemplateContext.id;
+        btn.style.opacity = _currentTemplateContext.id ? '1' : '0.45';
+        btn.style.cursor = _currentTemplateContext.id ? 'pointer' : 'not-allowed';
+        btn.title = _currentTemplateContext.id
+            ? `用当前工程覆盖模板「${_currentTemplateContext.name || _currentTemplateContext.id}」`
+            : '请先载入一个模板';
+    }
+    if (label) {
+        label.textContent = _currentTemplateContext.id
+            ? `当前: ${_currentTemplateContext.name || _currentTemplateContext.id}`
+            : '当前: 未载入模板';
+        label.title = _currentTemplateContext.name || _currentTemplateContext.id || '';
+    }
+}
+
+function openTemplateLibrary(onSelectCallback = null, opts = {}) {
+    // 如果已存在就显示
+    let modal = document.getElementById('template-library-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        // 绑定回调到全局，方便 _refreshTemplateList 中使用
+        modal._onSelectCallback = onSelectCallback;
+        modal._pickerDisabledIds = new Set(opts.disabledIds || []);
+        _updateCurrentTemplateButton();
+        _refreshTemplateList();
+        return;
+    }
+
+    modal = document.createElement('div');
+    modal.id = 'template-library-modal';
+    modal._onSelectCallback = onSelectCallback;
+    modal._pickerDisabledIds = new Set(opts.disabledIds || []);
+    modal._selectedTemplateIds = new Set();
+    modal.style.cssText = 'display:flex;align-items:center;justify-content:center;z-index:400000;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);';
+    
+    // UI elements hide/show based on mode
+    const isPicker = !!onSelectCallback;
+    
+    modal.innerHTML = `
+        <div class="modal-content" style="width:90vw;max-width:1100px;height:80vh;display:flex;flex-direction:column;background:var(--bg-secondary,#1a1a2e);border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid rgba(255,255,255,0.06);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <span style="font-size:22px;">📂</span>
+                    <h2 id="tpl-lib-title" style="margin:0;font-size:18px;font-weight:700;color:#fff;">${isPicker ? '选择视频模板' : '视频模板库'}</h2>
+                    <span id="tpl-count-badge" style="font-size:11px;padding:2px 8px;background:rgba(110,231,183,0.15);color:#6ee7b7;border-radius:10px;"></span>
+                </div>
+                <div style="display:flex;gap:6px;align-items:center;">
+                    ${isPicker ? '' : `
+                    <button onclick="saveCurrentAsTemplate()" style="padding:5px 12px;font-size:11px;font-weight:600;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:8px;cursor:pointer;">💾 保存当前工程</button>
+                    <button id="tpl-update-current-btn" onclick="updateCurrentTemplate()" style="padding:5px 12px;font-size:11px;font-weight:600;background:rgba(245,158,11,0.16);color:#fbbf24;border:1px solid rgba(245,158,11,0.35);border-radius:8px;cursor:pointer;">♻️ 更新当前模板</button>
+                    <button id="tpl-repair-thumbnails-btn" onclick="repairDuplicateTemplateThumbnails()" style="padding:5px 12px;font-size:11px;font-weight:600;background:rgba(14,165,233,0.15);color:#7dd3fc;border:1px solid rgba(14,165,233,0.35);border-radius:8px;cursor:pointer;">📸 修复重复封面</button>
+                    <button onclick="_importTemplate()" style="padding:5px 12px;font-size:11px;font-weight:600;background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3);border-radius:8px;cursor:pointer;">📥 导入</button>
+                    <button onclick="_exportAllTemplates()" style="padding:5px 12px;font-size:11px;font-weight:600;background:rgba(236,72,153,0.15);color:#ec4899;border:1px solid rgba(236,72,153,0.3);border-radius:8px;cursor:pointer;">📤 导出全部</button>
+                    <button id="tpl-select-all-btn" onclick="tplSelectAllTemplates()" style="padding:5px 12px;font-size:11px;font-weight:600;background:rgba(59,130,246,0.14);color:#93c5fd;border:1px solid rgba(59,130,246,0.34);border-radius:8px;cursor:pointer;">☑ 全选模板</button>
+                    <button id="tpl-save-selected-presets-btn" onclick="tplSaveSelectedPresets()" style="padding:5px 12px;font-size:11px;font-weight:600;background:rgba(16,185,129,0.16);color:#6ee7b7;border:1px solid rgba(16,185,129,0.36);border-radius:8px;cursor:pointer;">💾 保存所选预设</button>
+                    <span id="tpl-selected-count" style="font-size:10px;color:#94a3b8;white-space:nowrap;">未选择</span>
+                    <span id="tpl-current-template-label" style="max-width:170px;font-size:10px;color:#777;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></span>
+                    `}
+                    <label title="调整模板卡片大小" style="display:flex;align-items:center;gap:5px;padding:3px 7px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:#999;font-size:10px;white-space:nowrap;">
+                        <span>卡片</span>
+                        <input id="tpl-card-size-slider" type="range" min="100" max="360" step="20" value="${_getTemplateCardSize()}" oninput="_setTemplateCardSize(this.value)" style="width:82px;accent-color:#7c5cff;">
+                        <span id="tpl-card-size-value" style="width:35px;text-align:right;">${_getTemplateCardSize()}px</span>
+                    </label>
+                    <button onclick="document.getElementById('template-library-modal').style.display='none'" style="background:none;border:none;color:#888;font-size:20px;cursor:pointer;padding:4px 8px;">✕</button>
+                </div>
+            </div>
+            <div id="tpl-grid-container" style="flex:1;overflow-y:auto;padding:20px 24px;">
+                <div style="color:#666;text-align:center;padding:60px 0;">加载中...</div>
+            </div>
+        </div>
+    `;
+
+    // 点击遮罩关闭
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.style.display = 'none';
+    });
+
+    document.body.appendChild(modal);
+    _updateCurrentTemplateButton();
+    _refreshTemplateList();
+}
+
+async function _refreshTemplateList() {
+    const modal = document.getElementById('template-library-modal');
+    const container = document.getElementById('tpl-grid-container');
+    const badge = document.getElementById('tpl-count-badge');
+    if (!container || !modal) return;
+    
+    const isPicker = !!modal._onSelectCallback;
+
+    try {
+        const resp = await apiFetch(`${API_BASE}/templates/list`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        const parsed = await resp.json();
+        const templates = parsed.data || parsed || [];
+        modal._templateSummaries = templates;
+        if (!modal._selectedTemplateIds) modal._selectedTemplateIds = new Set();
+        const availableIds = new Set(templates.map(tpl => String(tpl.id)));
+        [...modal._selectedTemplateIds].forEach(id => { if (!availableIds.has(String(id))) modal._selectedTemplateIds.delete(id); });
+
+        badge.textContent = `${templates.length} 个模板`;
+
+        // Also update title in case mode changed via display='flex'
+        const titleEl = document.getElementById('tpl-lib-title');
+        if (titleEl) titleEl.textContent = isPicker ? '选择视频模板' : '视频模板库';
+
+        if (templates.length === 0) {
+            container.innerHTML = `
+                <div style="text-align:center;padding:80px 0;color:#555;">
+                    <div style="font-size:48px;margin-bottom:16px;opacity:0.4;">📂</div>
+                    <p style="font-size:14px;margin:0;">还没有保存任何模板</p>
+                    ${isPicker ? '' : '<p style="font-size:12px;color:#444;margin-top:6px;">点击上方「保存当前工程为模板」开始</p>'}
+                </div>
+            `;
+            return;
+        }
+
+        let html = `<div id="tpl-card-grid" style="--tpl-card-size:${_getTemplateCardSize()}px;display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--tpl-card-size),var(--tpl-card-size)));gap:16px;justify-content:start;align-items:start;">`;
+        for (const tpl of templates) {
+            const thumbSrc = tpl.thumbnail || '';
+            const dateStr = tpl.updatedAt ? new Date(tpl.updatedAt).toLocaleDateString('zh-CN') : '';
+            const taskInfo = tpl.taskCount ? `${tpl.taskCount} 个任务` : '';
+            const safeId = _tplEscapeHtml(tpl.id);
+            const safeName = _tplEscapeHtml(tpl.name || '');
+            const safeThumb = _tplEscapeHtml(thumbSrc);
+            const safeDate = _tplEscapeHtml(dateStr);
+            const safeTaskInfo = _tplEscapeHtml(taskInfo);
+            const isDisabledPick = isPicker && modal._pickerDisabledIds && modal._pickerDisabledIds.has(tpl.id);
+            const isSelected = !isPicker && modal._selectedTemplateIds.has(String(tpl.id));
+            const thumbHtml = thumbSrc
+                ? `<img src="${safeThumb}" style="width:100%;height:100%;object-fit:cover;" />`
+                : `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#555;font-size:36px;">🎬</div>`;
+
+            const actionsHtml = isPicker ? `
+                <div class="tpl-actions" style="position:absolute;top:8px;right:8px;left:8px;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:4px;opacity:0;transition:opacity 0.2s;background:rgba(0,0,0,0.7);padding:6px;border-radius:8px;">
+                    <button data-action="pick" ${isDisabledPick ? 'disabled' : ''} style="padding:4px 12px;font-size:12px;font-weight:600;background:${isDisabledPick ? 'rgba(120,120,130,0.35)' : 'linear-gradient(135deg,#7c5cff,#a855f7)'};color:${isDisabledPick ? '#999' : '#fff'};border:none;border-radius:6px;cursor:${isDisabledPick ? 'not-allowed' : 'pointer'};">${isDisabledPick ? '已添加' : '✅ 选用此模板'}</button>
+                </div>
+            ` : `
+                <div class="tpl-actions" style="position:absolute;top:8px;right:8px;left:8px;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:4px;opacity:1;transition:opacity 0.2s;background:rgba(0,0,0,0.5);padding:4px;border-radius:8px;">
+                    <button data-action="load" style="padding:4px 6px;font-size:11px;background:rgba(59,130,246,0.9);color:#fff;border:none;border-radius:6px;cursor:pointer;" title="覆盖当前工程直接载入">🔽</button>
+                    <button data-action="window" style="padding:4px 6px;font-size:11px;background:rgba(99,102,241,0.9);color:#fff;border:none;border-radius:6px;cursor:pointer;" title="独立新窗口打开">🪟</button>
+                    <button data-action="export" style="padding:4px 6px;font-size:11px;background:rgba(16,185,129,0.2);color:#10b981;border:none;border-radius:6px;cursor:pointer;" title="仅导出 JSON 配置">📤</button>
+                    <button data-action="export_archive" style="padding:4px 6px;font-size:11px;background:rgba(245,158,11,0.2);color:#fbbf24;border:none;border-radius:6px;cursor:pointer;" title="打包导出关联素材 (归档)">📦</button>
+                    <button data-action="rename" style="padding:4px 6px;font-size:11px;background:rgba(255,255,255,0.1);color:#ccc;border:none;border-radius:6px;cursor:pointer;" title="重命名">✏️</button>
+                    <button data-action="delete" style="padding:4px 6px;font-size:11px;background:rgba(239,68,68,0.2);color:#f87171;border:none;border-radius:6px;cursor:pointer;" title="删除">🗑</button>
+                </div>
+            `;
+
+            html += `
+                <div class="tpl-card" data-id="${safeId}" data-name="${safeName}" data-disabled-pick="${isDisabledPick ? 'true' : 'false'}" style="background:rgba(255,255,255,${isDisabledPick ? '0.018' : '0.03'});border:1px solid ${isDisabledPick ? 'rgba(120,120,130,0.28)' : 'rgba(255,255,255,0.06)'};border-radius:12px;overflow:hidden;cursor:${isDisabledPick ? 'not-allowed' : 'pointer'};transition:all 0.2s;position:relative;${isDisabledPick ? 'opacity:0.58;' : ''}"
+                     onmouseenter="this.style.borderColor='rgba(99,102,241,0.4)';this.style.transform='translateY(-2px)'"
+                     onmouseleave="this.style.borderColor='rgba(255,255,255,0.06)';this.style.transform='none'">
+                    <div style="width:100%;aspect-ratio:9/16;background:#0a0a1a;overflow:hidden;">
+                        ${thumbHtml}
+                    </div>
+                    ${isPicker ? '' : `<label title="选择此模板以保存其动态字幕和覆层预设" style="position:absolute;left:8px;top:8px;display:flex;align-items:center;gap:4px;padding:4px 7px;background:rgba(0,0,0,.72);border-radius:7px;color:#fff;font-size:11px;cursor:pointer;"><input class="tpl-select-preset" type="checkbox" ${isSelected ? 'checked' : ''} style="accent-color:#34d399;cursor:pointer;"> 选择</label>`}
+                    ${isDisabledPick ? '<div style="position:absolute;left:8px;top:8px;background:rgba(16,185,129,0.9);color:#06150f;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;">已添加</div>' : ''}
+                    <div style="padding:10px 12px;">
+                        <div class="tpl-name" style="font-size:13px;font-weight:600;color:#e0e0e0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${safeName}">${safeName}</div>
+                        <div style="font-size:10px;color:#666;margin-top:4px;display:flex;justify-content:space-between;">
+                            <span>${safeDate}</span>
+                            <span>${safeTaskInfo}</span>
+                        </div>
+                    </div>
+                    ${actionsHtml}
+                </div>
+            `;
+        }
+        html += '</div>';
+        container.innerHTML = html;
+
+        // 显示操作按钮的 hover 效果
+        container.querySelectorAll('.tpl-card').forEach(card => {
+            const selectBox = card.querySelector('.tpl-select-preset');
+            if (selectBox) {
+                selectBox.addEventListener('click', event => event.stopPropagation());
+                selectBox.addEventListener('change', event => {
+                    const selected = modal._selectedTemplateIds || (modal._selectedTemplateIds = new Set());
+                    if (event.currentTarget.checked) selected.add(card.dataset.id);
+                    else selected.delete(card.dataset.id);
+                    _updateTemplatePresetSelectionUI();
+                });
+            }
+            if (isPicker) {
+                card.addEventListener('mouseenter', () => card.querySelector('.tpl-actions').style.opacity = '1');
+                card.addEventListener('mouseleave', () => card.querySelector('.tpl-actions').style.opacity = '0');
+            } else {
+                card.addEventListener('mouseenter', () => card.querySelector('.tpl-actions').style.opacity = '1');
+                card.addEventListener('mouseleave', () => card.querySelector('.tpl-actions').style.opacity = '0');
+            }
+            
+            card.querySelector('.tpl-actions')?.addEventListener('click', async (e) => {
+                const btn = e.target.closest('button[data-action]');
+                if (!btn) return;
+                e.stopPropagation();
+                const id = card.dataset.id || '';
+                const name = card.dataset.name || '';
+                const action = btn.dataset.action;
+                
+                if (action === 'pick') {
+                    if (btn.disabled || card.dataset.disabledPick === 'true') return;
+                    // Fetch full data and pass to callback
+                    btn.textContent = '加载中...';
+                    try {
+                        const r = await apiFetch(`${API_BASE}/templates/get`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id}) });
+                        const res = await r.json();
+                        const tplData = res.data || res;
+                        if (modal._onSelectCallback) {
+                            modal._onSelectCallback(tplData);
+                        }
+                        btn.textContent = '✅ 已添加';
+                        btn.style.background = 'rgba(16,185,129,0.8)';
+                        setTimeout(() => {
+                            btn.textContent = '✅ 选用此模板';
+                            btn.style.background = 'linear-gradient(135deg,#7c5cff,#a855f7)';
+                        }, 1500);
+                    } catch(err) {
+                        alert('读取模板失败');
+                        btn.textContent = '✅ 选用此模板';
+                    }
+                }
+                else if (action === 'load') _loadTemplateInCurrentWindow(id);
+                else if (action === 'window') _openTemplateInWindow(id, name);
+                else if (action === 'export') _exportTemplate(id, name);
+                else if (action === 'export_archive') _exportArchiveTemplate(id, name);
+                else if (action === 'rename') _renameTemplate(id);
+                else if (action === 'delete') _deleteTemplate(id, name);
+            });
+            
+            // 双击打开
+            card.addEventListener('dblclick', async () => {
+                const id = card.dataset.id;
+                const name = card.dataset.name || '';
+                if (isPicker) {
+                    if (card.dataset.disabledPick === 'true') return;
+                    try {
+                        const r = await apiFetch(`${API_BASE}/templates/get`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id}) });
+                        const res = await r.json();
+                        if (modal._onSelectCallback) modal._onSelectCallback(res.data || res);
+                    } catch(err) {}
+                } else {
+                    _openTemplateInWindow(id, name);
+                }
+            });
+        });
+
+        _updateTemplatePresetSelectionUI();
+
+    } catch (e) {
+        container.innerHTML = `<div style="color:#f87171;text-align:center;padding:40px;">加载失败: ${e.message}</div>`;
+    }
+}
+
+function _updateTemplatePresetSelectionUI() {
+    const modal = document.getElementById('template-library-modal');
+    if (!modal || modal._onSelectCallback) return;
+    const selected = modal._selectedTemplateIds || new Set();
+    const total = (modal._templateSummaries || []).length;
+    const count = selected.size;
+    const label = document.getElementById('tpl-selected-count');
+    const allButton = document.getElementById('tpl-select-all-btn');
+    const saveButton = document.getElementById('tpl-save-selected-presets-btn');
+    if (label) label.textContent = count ? `已选 ${count} / ${total}` : '未选择';
+    if (allButton) allButton.textContent = total && count === total ? '☐ 取消全选' : '☑ 全选模板';
+    if (saveButton) {
+        saveButton.disabled = count === 0;
+        saveButton.style.opacity = count ? '1' : '.48';
+        saveButton.style.cursor = count ? 'pointer' : 'not-allowed';
+    }
+}
+
+function tplSelectAllTemplates() {
+    const modal = document.getElementById('template-library-modal');
+    if (!modal || modal._onSelectCallback) return;
+    const templates = modal._templateSummaries || [];
+    const selected = modal._selectedTemplateIds || (modal._selectedTemplateIds = new Set());
+    const selectAll = selected.size !== templates.length;
+    selected.clear();
+    if (selectAll) templates.forEach(tpl => selected.add(String(tpl.id)));
+    modal.querySelectorAll('.tpl-select-preset').forEach(box => { box.checked = selected.has(box.closest('.tpl-card').dataset.id); });
+    _updateTemplatePresetSelectionUI();
+}
+
+async function tplSaveSelectedPresets() {
+    const modal = document.getElementById('template-library-modal');
+    if (!modal || modal._onSelectCallback) return;
+    const selected = [...(modal._selectedTemplateIds || [])];
+    if (!selected.length) return;
+    const groupName = await (typeof _showInputDialog === 'function'
+        ? _showInputDialog('预设保存分组', '例如：九月祷告、金色字幕', '我的预设')
+        : Promise.resolve(prompt('输入预设分组名称：', '我的预设')));
+    const category = String(groupName || '').trim();
+    if (!category) return;
+    if (!confirm(`将 ${selected.length} 个模板中的动态字幕和覆层分别保存到分组「${category}」？\n\n同名预设会自动重命名，不会修改原模板或已有预设。`)) return;
+
+    const button = document.getElementById('tpl-save-selected-presets-btn');
+    if (button) { button.disabled = true; button.textContent = '保存中…'; }
+    let subtitles = 0, overlays = 0, failed = 0;
+    for (const id of selected) {
+        try {
+            const resp = await apiFetch(`${API_BASE}/templates/get`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }),
+            });
+            const parsed = await resp.json();
+            const template = parsed.data || parsed;
+            if (!template?.projectData) throw new Error('模板工程数据不存在');
+            const synced = _syncTemplatePresetAssets(template.name || id, template.projectData, category);
+            if (synced.subtitle) subtitles++;
+            if (synced.overlay) overlays++;
+        } catch (error) {
+            failed++;
+            console.warn('[Template] 保存所选预设失败:', id, error);
+        }
+    }
+    if (button) button.textContent = '💾 保存所选预设';
+    _updateTemplatePresetSelectionUI();
+    const message = `已保存到「${category}」：动态字幕 ${subtitles} 个、覆层 ${overlays} 个${failed ? `；${failed} 个失败` : ''}`;
+    if (typeof showToast === 'function') showToast(message, failed ? 'warning' : 'success', 5000);
+    else alert(message);
+}
+
+// ═══════════════════════════════════════════════════════
+// 2. 保存当前工程为模板
+// ═══════════════════════════════════════════════════════
+
+/** 为队列生成稳定短编号；同一路径/标签在不同日期保存仍保持一致。 */
+function _templateQueueShortId(value) {
+    const input = String(value || 'queue').trim().toLowerCase().replace(/\\/g, '/');
+    let hash = 2166136261;
+    for (let i = 0; i < input.length; i++) {
+        hash ^= input.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+    }
+    return (hash >>> 0).toString(36).toUpperCase().padStart(7, '0').slice(-7);
+}
+
+function _templateQueueIdentityFromTasks(tasks) {
+    const list = Array.isArray(tasks) ? tasks : [];
+    const folderIds = [...new Set(list.map(t => t?._folderQueueId).filter(Boolean))];
+    if (folderIds.length === 1) return `folder:${folderIds[0]}`;
+    const tabIds = [...new Set(list.map(t => t?._batchTabId).filter(Boolean))];
+    if (tabIds.length === 1) return `tab:${tabIds[0]}`;
+    return '';
+}
+
+function _templateIdForQueue(baseName, queueIdentity) {
+    return `tpl_queue_${_templateQueueShortId(`${baseName}|${queueIdentity}`)}`;
+}
+
+function _captureVisibleTemplateThumbnail() {
+    let thumbnail = '';
+    try {
+        // V2 使用独立 Canvas。优先截取当前正在显示的预览，
+        // 同时保留旧预览回退，避免已有模板流程受影响。
+        const v2 = window.ReelsPreviewV2;
+        const canvas = (v2?.isOpen?.() ? v2.getCanvas?.() : null)
+            || document.getElementById('reels-preview-canvas');
+        if (canvas) {
+            // 创建缩略图 canvas（270×480，9:16）
+            const thumbCanvas = document.createElement('canvas');
+            thumbCanvas.width = 270;
+            thumbCanvas.height = 480;
+            const ctx = thumbCanvas.getContext('2d');
+            ctx.drawImage(canvas, 0, 0, 270, 480);
+            thumbnail = thumbCanvas.toDataURL('image/jpeg', 0.65);
+        }
+    } catch (e) {
+        console.warn('[Template] 截图失败:', e);
+    }
+    return thumbnail;
+}
+
+async function _captureTemplateThumbnailForTasks(tasks, fallbackThumbnail = '') {
+    const state = window._reelsState;
+    if (!state || !Array.isArray(tasks) || tasks.length === 0) return fallbackThumbnail;
+    const originalTasks = state.tasks;
+    const originalSelectedIdx = state.selectedIdx;
+    window._templateThumbnailCaptureActive = true;
+    try {
+        state.tasks = tasks;
+        state.selectedIdx = -1;
+        if (typeof reelsSelectTask === 'function') reelsSelectTask(0);
+        else {
+            state.selectedIdx = 0;
+            if (typeof reelsUpdatePreview === 'function') reelsUpdatePreview();
+        }
+        // 等待图片/视频元数据和 Canvas 至少完成一次实际绘制。
+        await new Promise(resolve => setTimeout(resolve, 450));
+        return _captureVisibleTemplateThumbnail() || fallbackThumbnail;
+    } catch (error) {
+        console.warn('[Template] 队列独立截图失败:', error);
+        return fallbackThumbnail;
+    } finally {
+        state.tasks = originalTasks;
+        state.selectedIdx = -1;
+        if (originalSelectedIdx >= 0 && originalSelectedIdx < originalTasks.length && typeof reelsSelectTask === 'function') {
+            reelsSelectTask(originalSelectedIdx);
+        } else {
+            state.selectedIdx = originalSelectedIdx;
+            if (typeof _renderTaskList === 'function') _renderTaskList();
+        }
+        window._templateThumbnailCaptureActive = false;
+    }
+}
+
+async function _repairTemplateThumbnailsByIds(templateIds, options = {}) {
+    const ids = [...new Set((templateIds || []).filter(Boolean))];
+    if (!ids.length) return { repaired: 0, failed: 0 };
+    const button = document.getElementById('tpl-repair-thumbnails-btn');
+    const originalText = button?.textContent || '';
+    if (button) button.disabled = true;
+    let repaired = 0;
+    let failed = 0;
+    try {
+        for (let i = 0; i < ids.length; i++) {
+            if (button) button.textContent = `📸 ${i + 1}/${ids.length}`;
+            try {
+                const getResp = await apiFetch(`${API_BASE}/templates/get`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: ids[i] })
+                });
+                const getResult = await getResp.json();
+                const tpl = getResult.data || getResult;
+                const tasks = tpl?.projectData?.tasks || [];
+                if (!tasks.length) throw new Error('模板没有任务');
+                const thumbnail = await _captureTemplateThumbnailForTasks(tasks, tpl.thumbnail || '');
+                if (!thumbnail) throw new Error('未能生成截图');
+                const saveResp = await apiFetch(`${API_BASE}/templates/save`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: tpl.id,
+                        name: tpl.name,
+                        description: tpl.description || '',
+                        tags: tpl.tags || [],
+                        thumbnail,
+                        projectData: tpl.projectData,
+                    }),
+                });
+                const saveResult = await saveResp.json();
+                if (!(saveResult.success || saveResult.data?.success)) throw new Error(saveResult.error || '保存失败');
+                repaired++;
+            } catch (error) {
+                failed++;
+                console.warn(`[Template] 修复模板封面失败 ${ids[i]}:`, error);
+            }
+        }
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.textContent = originalText || '📸 修复重复封面';
+        }
+        if (document.getElementById('template-library-modal')) _refreshTemplateList();
+    }
+    if (!options.silent && typeof showToast === 'function') {
+        showToast(`已重新生成 ${repaired} 张模板封面${failed ? `，${failed} 张失败` : ''}`, failed ? 'warning' : 'success', 6000);
+    }
+    return { repaired, failed };
+}
+
+async function repairDuplicateTemplateThumbnails() {
+    try {
+        const resp = await apiFetch(`${API_BASE}/templates/list`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
+        });
+        const parsed = await resp.json();
+        const templates = parsed.data || parsed || [];
+        const byThumbnail = new Map();
+        templates.forEach(tpl => {
+            const key = String(tpl.thumbnail || '');
+            if (!key) return;
+            if (!byThumbnail.has(key)) byThumbnail.set(key, []);
+            byThumbnail.get(key).push(tpl.id);
+        });
+        const duplicateIds = [...byThumbnail.values()].filter(group => group.length > 1).flat();
+        if (!duplicateIds.length) {
+            if (typeof showToast === 'function') showToast('没有检测到重复模板封面', 'info');
+            return;
+        }
+        if (!confirm(`检测到 ${duplicateIds.length} 个模板共用了重复封面。\n\n是否逐模板重新生成独立截图？`)) return;
+        await _repairTemplateThumbnailsByIds(duplicateIds);
+    } catch (error) {
+        if (typeof showToast === 'function') showToast(`修复模板封面失败：${error.message}`, 'error');
+    }
+}
+window.repairDuplicateTemplateThumbnails = repairDuplicateTemplateThumbnails;
+window._repairTemplateThumbnailsByIds = _repairTemplateThumbnailsByIds;
+
+function _captureCurrentTemplatePayload(name) {
+    // 截取当前 Canvas 预览作为缩略图
+    const thumbnail = _captureVisibleTemplateThumbnail();
+
+    // 用 ReelsProject.collectProjectData 序列化工程
+    let projectData = {};
+    try {
+        if (typeof collectCurrentProjectState === 'function') {
+            const state = collectCurrentProjectState();
+            projectData = ReelsProject.collectProjectData(state);
+        } else if (typeof ReelsProject !== 'undefined') {
+            // 尝试直接收集
+            projectData = ReelsProject.collectProjectData({
+                tasks: window.reelsTasks || [],
+                style: window.reelsGlobalStyle || {},
+                exportOpts: window.reelsExportOpts || {},
+                selectedIdx: window.reelsSelectedIdx || 0,
+            });
+        }
+    } catch (e) {
+        console.error('[Template] 工程序列化失败:', e);
+        throw new Error('序列化工程失败: ' + e.message);
+    }
+
+    return {
+        name,
+        thumbnail,
+        projectData,
+    };
+}
+
+function _makeUniqueTemplatePresetName(baseName, existingNames) {
+    const occupied = existingNames instanceof Set ? existingNames : new Set(existingNames || []);
+    if (!occupied.has(baseName)) return baseName;
+    let index = 2;
+    let candidate = `${baseName}（${index}）`;
+    while (occupied.has(candidate)) candidate = `${baseName}（${++index}）`;
+    return candidate;
+}
+
+// 模板工程内的样式/覆层是快照；用户选择同步时，再生成可跨工程调用的独立预设。
+// 同名不覆盖已有“我的预设”，而是自动创建带序号的新预设。
+function _syncTemplatePresetAssets(templateName, projectData, category = '模板同步') {
+    const tasks = Array.isArray(projectData?.tasks) ? projectData.tasks : [];
+    const result = { subtitle: false, overlay: false };
+    const subtitleStyle = tasks.find(task => task?.subtitleStyle && Object.keys(task.subtitleStyle).length)?.subtitleStyle
+        || projectData?.style || null;
+    if (subtitleStyle && window.ReelsStyleEngine?.saveNamedSubtitlePreset) {
+        const subtitleData = window.ReelsStyleEngine.loadSubtitlePresets?.() || {};
+        const subtitleNames = new Set(Object.keys(subtitleData.presets || {}));
+        const presetName = _makeUniqueTemplatePresetName(`${templateName} · 动态字幕`, subtitleNames);
+        result.subtitle = window.ReelsStyleEngine.saveNamedSubtitlePreset(presetName, subtitleStyle, category);
+    }
+    const sourceLayers = tasks.find(task => Array.isArray(task?.overlays) && task.overlays.length)?.overlays;
+    if (sourceLayers) {
+        const layers = JSON.parse(JSON.stringify(sourceLayers)).map(layer => {
+            delete layer._img; delete layer._imgLoaded; delete layer._allOverlays;
+            if (!layer.fixed_text) {
+                delete layer.title_text; delete layer.body_text; delete layer.footer_text;
+                delete layer.scroll_title; delete layer.content;
+            }
+            return layer;
+        });
+        try {
+            const key = 'reels_overlay_group_presets';
+            const saved = JSON.parse(localStorage.getItem(key) || '{}');
+            const layerTypes = [...new Set(layers.map(layer => ({ text:'纯文本', textcard:'文字卡片', scroll:'滚动字幕', image:'图片媒体', video:'视频媒体', solid_mask:'纯色蒙版' })[layer.type] || '其他覆层'))];
+            const presetName = _makeUniqueTemplatePresetName(`${templateName} · 覆层`, new Set(Object.keys(saved)));
+            saved[presetName] = { name:presetName, layers, updatedAt:new Date().toISOString(), meta:{ layerCount:layers.length, category, layerTypes, needsBatchText:layers.some(layer => !layer.fixed_text && ['text','textcard','scroll'].includes(layer.type)) } };
+            localStorage.setItem(key, JSON.stringify(saved));
+            result.overlay = true;
+        } catch (error) { console.warn('[Template] 同步覆层预设失败:', error); }
+    }
+    return result;
+}
+
+async function saveCurrentAsTemplate() {
+    const name = await (typeof _showInputDialog === 'function' ? _showInputDialog('请输入模板名称', `模板_${new Date().toLocaleDateString('zh-CN')}`) : prompt('请输入模板名称：', `模板_${new Date().toLocaleDateString('zh-CN')}`));
+    if (!name || !name.trim()) return;
+    const syncPresetAssets = confirm('是否同时同步保存独立预设？\n\n“是”：把模板内的动态字幕样式和覆层分别保存为同名独立预设。\n“否”：仅保存模板工程。');
+
+    try {
+        const baseName = name.trim();
+        const basePayload = _captureCurrentTemplatePayload(baseName);
+
+        // 按任务列表实际显示的分组分别保存：批量标签页、文件夹/账号队列、
+        // 以及未归档的已有任务，都是独立模板。不能只看批量表格标签页，
+        // 因为文件夹导入的账号队列没有标签页时，也应当分开保存。
+        let groups = [];
+        if (typeof _batchTableState !== 'undefined' && Array.isArray(_batchTableState.tabs)) {
+            if (typeof _syncTasksToActiveTab === 'function') _syncTasksToActiveTab();
+
+            const visibleGroups = new Map();
+            const visibleTasks = window._reelsState?.tasks || [];
+            visibleTasks.forEach(task => {
+                let id = 'legacy';
+                let name = '已有任务（未归档）';
+                if (task._batchTabId) {
+                    id = `tab:${task._batchTabId}`;
+                    name = task._batchTabName || '未命名分组';
+                } else if (task._folderQueueId) {
+                    id = `folder:${task._folderQueueId}`;
+                    name = task._folderQueueName || '文件夹队列';
+                }
+                if (!visibleGroups.has(id)) {
+                    visibleGroups.set(id, { id, name, tasks: [], isActive: false });
+                }
+                visibleGroups.get(id).tasks.push(task);
+            });
+
+            // 当前任务列表已经汇总显示多个组时，以它为准；否则回退到批量表格标签页。
+            if (visibleGroups.size > 1) {
+                groups = Array.from(visibleGroups.values());
+            } else {
+                groups = _batchTableState.tabs
+                    .filter(tab => Array.isArray(tab.tasks) && tab.tasks.length > 0)
+                    .map(tab => ({ ...tab, isActive: tab.id === _batchTableState.activeTabId }));
+            }
+        }
+
+        if (groups.length > 1) {
+            let saved = 0;
+            let syncedSubtitle = 0, syncedOverlay = 0;
+            const failed = [];
+            const usedNames = new Map();
+
+            for (let index = 0; index < groups.length; index++) {
+                const group = groups[index];
+                const rawGroupName = String(group.name || `分组${index + 1}`).trim() || `分组${index + 1}`;
+                const seenCount = (usedNames.get(rawGroupName) || 0) + 1;
+                usedNames.set(rawGroupName, seenCount);
+                const groupName = seenCount > 1 ? `${rawGroupName}_${seenCount}` : rawGroupName;
+                const queueIdentity = group.id || _templateQueueIdentityFromTasks(group.tasks) || `group:${index}`;
+                const queueShortId = _templateQueueShortId(queueIdentity);
+                const templateName = `${baseName}_${groupName} [Q-${queueShortId}]`;
+                const stableTemplateId = _templateIdForQueue(baseName, queueIdentity);
+                const projectData = ReelsProject.collectProjectData({
+                    tasks: group.tasks,
+                    backgroundLibrary: basePayload.projectData.backgroundLibrary || [],
+                    style: basePayload.projectData.style || {},
+                    exportOpts: basePayload.projectData.exportOpts || {},
+                    selectedIdx: group.tasks.length ? 0 : -1,
+                });
+
+                try {
+                    const groupThumbnail = await _captureTemplateThumbnailForTasks(group.tasks, basePayload.thumbnail);
+                    const resp = await apiFetch(`${API_BASE}/templates/save`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: stableTemplateId,
+                            name: templateName,
+                            // 账号队列拆分保存时，当前预览画面可作为本次保存的可见缩略图。
+                            // 之前只给“激活标签”写缩略图，队列分组 ID 与标签 ID 不同，
+                            // 导致所有新模板都显示为空白场记板。
+                            thumbnail: groupThumbnail,
+                            projectData,
+                        }),
+                    });
+                    const result = await resp.json();
+                    if (!(result.success || result.data?.success)) {
+                        throw new Error(result.error || '保存失败');
+                    }
+                    if (syncPresetAssets) {
+                        const synced = _syncTemplatePresetAssets(templateName, projectData);
+                        if (synced.subtitle) syncedSubtitle++;
+                        if (synced.overlay) syncedOverlay++;
+                    }
+                    saved++;
+                } catch (e) {
+                    failed.push(`${groupName}: ${e.message}`);
+                }
+            }
+
+            if (!saved) throw new Error(failed.join('；') || '所有分组保存失败');
+            _setCurrentTemplateContext('', '');
+            if (typeof showToast === 'function') {
+                showToast(
+                    `已按分组保存 ${saved} 个模板${syncPresetAssets ? `；同步字幕 ${syncedSubtitle} 个、覆层 ${syncedOverlay} 个` : ''}${failed.length ? `，${failed.length} 个失败` : ''} ✅`,
+                    failed.length ? 'warning' : 'success'
+                );
+            }
+            if (failed.length) console.warn('[Template] 分组模板保存失败:', failed);
+            _refreshTemplateList();
+            return;
+        }
+
+        const payload = basePayload;
+        const singleQueueIdentity = _templateQueueIdentityFromTasks(window._reelsState?.tasks || []);
+        if (singleQueueIdentity) {
+            const queueShortId = _templateQueueShortId(singleQueueIdentity);
+            payload.name = `${baseName} [Q-${queueShortId}]`;
+            payload.id = _templateIdForQueue(baseName, singleQueueIdentity);
+        }
+        const resp = await apiFetch(`${API_BASE}/templates/save`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const result = await resp.json();
+        if (!(result.success || result.data?.success)) throw new Error(result.error || '保存失败');
+        const synced = syncPresetAssets ? _syncTemplatePresetAssets(payload.name || baseName, payload.projectData) : { subtitle:false, overlay:false };
+
+        const savedId = result.id || result.data?.id || '';
+        if (savedId) _setCurrentTemplateContext(savedId, payload.name || baseName);
+        if (typeof showToast === 'function') showToast(`模板「${payload.name || baseName}」已保存${syncPresetAssets ? `；已同步${synced.subtitle ? '动态字幕' : ''}${synced.subtitle && synced.overlay ? '、' : ''}${synced.overlay ? '覆层预设' : ''}` : ''} ✅`, 'success');
+        _refreshTemplateList();
+    } catch (e) {
+        if (typeof showToast === 'function') showToast('保存模板失败: ' + e.message, 'error');
+    }
+}
+
+async function updateCurrentTemplate() {
+    if (!_currentTemplateContext.id) {
+        if (typeof showToast === 'function') showToast('请先从模板库载入一个模板，再更新当前模板', 'warning');
+        else alert('请先从模板库载入一个模板，再更新当前模板');
+        return;
+    }
+
+    const name = _currentTemplateContext.name || _currentTemplateContext.id;
+    if (!confirm(`确定用当前工程覆盖模板「${name}」？`)) return;
+
+    try {
+        const payload = _captureCurrentTemplatePayload(name);
+        const resp = await apiFetch(`${API_BASE}/templates/save`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ...payload,
+                id: _currentTemplateContext.id,
+            }),
+        });
+        const result = await resp.json();
+        if (result.success || result.data?.success) {
+            if (typeof showToast === 'function') showToast(`模板「${name}」已更新 ✅`, 'success');
+            _refreshTemplateList();
+        } else {
+            throw new Error(result.error || '更新失败');
+        }
+    } catch (e) {
+        if (typeof showToast === 'function') showToast('更新模板失败: ' + e.message, 'error');
+        else alert('更新模板失败: ' + e.message);
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+// 3. 打开模板（新窗口 / 当前窗口）
+// ═══════════════════════════════════════════════════════
+
+async function _openTemplateInWindow(templateId, templateName) {
+    if (window.electronAPI?.openTemplateWindow) {
+        try {
+            const result = await window.electronAPI.openTemplateWindow(templateId, templateName);
+            if (result?.reused) {
+                if (typeof showToast === 'function') showToast(`模板「${templateName}」窗口已聚焦`, 'info');
+            }
+        } catch (e) {
+            console.error('[Template] 打开窗口失败:', e);
+            // Fallback: 当前窗口加载
+            _loadTemplateInCurrentWindow(templateId);
+        }
+    } else {
+        // 浏览器模式：当前窗口加载
+        _loadTemplateInCurrentWindow(templateId);
+    }
+}
+
+async function _loadTemplateInCurrentWindow(templateId) {
+    try {
+        const resp = await apiFetch(`${API_BASE}/templates/get`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: templateId }),
+        });
+        const result = await resp.json();
+        const tplData = result.data || result;
+
+        if (tplData.projectData && typeof ReelsProject !== 'undefined') {
+            // ── 诊断日志：模板加载数据追踪 ──
+            const rawTasks = tplData.projectData.tasks || [];
+            console.log(`[Template] 📦 原始模板数据: ${rawTasks.length} 个任务`);
+            rawTasks.forEach((t, i) => {
+                const ovCount = (t.overlays || []).length;
+                const segCount = (t.segments || []).length;
+                const coverOvCount = (t.cover?.overlays || []).length;
+                console.log(`  [${i}] overlays=${ovCount}, segments=${segCount}, cover.overlays=${coverOvCount}, txtContent=${(t.txtContent || '').slice(0, 30)}`);
+            });
+
+            const restored = ReelsProject.applyProjectData(tplData.projectData);
+
+            console.log(`[Template] 🔄 反序列化后: ${restored.tasks.length} 个任务`);
+            restored.tasks.forEach((t, i) => {
+                const ovCount = (t.overlays || []).length;
+                const segCount = (t.segments || []).length;
+                const coverOvCount = (t.cover?.overlays || []).length;
+                console.log(`  [${i}] overlays=${ovCount}, segments=${segCount}, cover.overlays=${coverOvCount}`);
+            });
+
+            if (typeof applyRestoredProject === 'function') {
+                applyRestoredProject(restored);
+            }
+
+            console.log(`[Template] ✅ applyRestoredProject 完成后:`);
+            (_reelsState?.tasks || []).forEach((t, i) => {
+                const ovCount = (t.overlays || []).length;
+                const segCount = (t.segments || []).length;
+                const coverOvCount = (t.cover?.overlays || []).length;
+                console.log(`  [${i}] overlays=${ovCount}, segments=${segCount}, cover.overlays=${coverOvCount}`);
+            });
+            _setCurrentTemplateContext(tplData.id || templateId, tplData.name || '');
+            if (typeof showToast === 'function') showToast(`模板「${tplData.name}」已加载`, 'success');
+
+            // 关闭模板库面板
+            const modal = document.getElementById('template-library-modal');
+            if (modal) modal.style.display = 'none';
+
+            // 自动切换到批量 Reels 标签页
+            if (typeof openPanelByName === 'function') {
+                openPanelByName('batch-reels');
+            }
+        }
+    } catch (e) {
+        if (typeof showToast === 'function') showToast('加载模板失败: ' + e.message, 'error');
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+// 4. 删除 / 重命名
+// ═══════════════════════════════════════════════════════
+
+async function _deleteTemplate(id, name) {
+    if (!confirm(`确定删除模板「${name}」？此操作不可恢复。`)) return;
+
+    try {
+        await apiFetch(`${API_BASE}/templates/delete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id }),
+        });
+        if (_currentTemplateContext.id === id) {
+            _setCurrentTemplateContext('', '');
+        }
+        if (typeof showToast === 'function') showToast(`模板「${name}」已删除`, 'success');
+        _refreshTemplateList();
+    } catch (e) {
+        if (typeof showToast === 'function') showToast('删除失败: ' + e.message, 'error');
+    }
+}
+
+async function _renameTemplate(id) {
+    const newName = await (typeof _showInputDialog === 'function' ? _showInputDialog('请输入新名称', '') : prompt('请输入新名称：'));
+    if (!newName || !newName.trim()) return;
+
+    try {
+        await apiFetch(`${API_BASE}/templates/rename`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, name: newName.trim() }),
+        });
+        if (_currentTemplateContext.id === id) {
+            _setCurrentTemplateContext(id, newName.trim());
+        }
+        if (typeof showToast === 'function') showToast('已重命名', 'success');
+        _refreshTemplateList();
+    } catch (e) {
+        if (typeof showToast === 'function') showToast('重命名失败: ' + e.message, 'error');
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+// 4b. 导入 / 导出模板文件
+// ═══════════════════════════════════════════════════════
+
+/**
+ * 导出模板为 .vktpl 文件
+ */
+async function _exportTemplate(id, name) {
+    try {
+        const resp = await apiFetch(`${API_BASE}/templates/get`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id }),
+        });
+        const result = await resp.json();
+        const tplData = result.data || result;
+
+        // 导出完整数据（含缩略图）
+        const exportObj = {
+            _format: 'videokit-template',
+            _version: 1,
+            name: tplData.name,
+            description: tplData.description || '',
+            thumbnail: tplData.thumbnail || '',
+            tags: tplData.tags || [],
+            createdAt: tplData.createdAt,
+            projectData: tplData.projectData,
+        };
+
+        const jsonStr = JSON.stringify(exportObj, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${name || 'template'}.vktpl`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        if (typeof showToast === 'function') showToast(`模板「${name}」已导出`, 'success');
+    } catch (e) {
+        if (typeof showToast === 'function') showToast('导出失败: ' + e.message, 'error');
+        else alert('导出失败: ' + e.message);
+    }
+}
+
+/**
+ * 打包导出模板及关联的本地素材 (归档)
+ */
+async function _exportArchiveTemplate(id, name) {
+    try {
+        if (typeof showToast === 'function') showToast(`正在收集素材并打包，请稍候...`, 'info');
+        const resp = await apiFetch(`${API_BASE}/templates/export-archive`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id }),
+        });
+        const result = await resp.json();
+        const zipPath = result.data ? result.data.zip_path : result.zip_path;
+        if (zipPath && window.electronAPI && window.electronAPI.showItemInFolder) {
+            window.electronAPI.showItemInFolder(zipPath);
+            if (typeof showToast === 'function') showToast(`打包完成！已在文件夹中显示。`, 'success');
+        } else if (zipPath) {
+            if (typeof showToast === 'function') showToast(`打包完成: ${zipPath}`, 'success');
+        } else {
+            throw new Error(result.error || '打包失败');
+        }
+    } catch (e) {
+        if (typeof showToast === 'function') showToast('打包失败: ' + e.message, 'error');
+        else alert('打包失败: ' + e.message);
+    }
+}
+
+/**
+ * 导入 .vktpl 或 .vkpkg 模板文件
+ */
+async function _importTemplate() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.vktpl,.json,.vkpkg';
+    input.multiple = true;
+    input.onchange = async (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        let imported = 0;
+        for (const file of files) {
+            if (file.name.endsWith('.vkpkg')) {
+                const filePath = window.electronAPI ? window.electronAPI.getFilePath(file) : '';
+                if (!filePath) {
+                    if (typeof showToast === 'function') showToast(`跳过 ${file.name}: 无法获取本地路径`, 'warning');
+                    continue;
+                }
+                try {
+                    if (typeof showToast === 'function') showToast(`正在导入归档包 ${file.name}...`, 'info');
+                    const resp = await apiFetch(`${API_BASE}/templates/import-archive`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ zip_path: filePath }),
+                    });
+                    const result = await resp.json();
+                    if (result.id || (result.data && result.data.id)) {
+                        imported++;
+                    }
+                } catch (err) {
+                    if (typeof showToast === 'function') showToast(`导入失败 ${file.name}: ` + err.message, 'error');
+                }
+                continue;
+            }
+
+            try {
+                const text = await file.text();
+                const data = JSON.parse(text);
+
+                // 校验是否为合集
+                const templatesToImport = [];
+                if (data._format === 'videokit-template-collection' && Array.isArray(data.templates)) {
+                    templatesToImport.push(...data.templates);
+                } else if (data.projectData) {
+                    templatesToImport.push(data);
+                } else {
+                    if (typeof showToast === 'function') showToast(`跳过 ${file.name}: 不是有效的模板文件`, 'warning');
+                    else alert(`跳过 ${file.name}: 不是有效的模板文件`);
+                    continue;
+                }
+
+                for (const tpl of templatesToImport) {
+                    const resp = await apiFetch(`${API_BASE}/templates/save`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: tpl.name || file.name.replace(/\.(vktpl|json)$/i, ''),
+                            description: tpl.description || '',
+                            thumbnail: tpl.thumbnail || '',
+                            tags: tpl.tags || [],
+                            projectData: tpl.projectData,
+                        }),
+                    });
+                    const result = await resp.json();
+                    if (result.success || result.data?.success) {
+                        imported++;
+                    }
+                }
+            } catch (err) {
+                console.error(`[Template] 导入 ${file.name} 失败:`, err);
+                if (typeof showToast === 'function') showToast(`导入 ${file.name} 失败: ${err.message}`, 'error');
+                else alert(`导入 ${file.name} 失败: ${err.message}`);
+            }
+        }
+
+        if (imported > 0) {
+            if (typeof showToast === 'function') showToast(`成功导入 ${imported} 个模板 ✅`, 'success');
+            else alert(`成功导入 ${imported} 个模板 ✅`);
+            _refreshTemplateList();
+        }
+    };
+    input.click();
+}
+
+/**
+ * 一键导出所有模板
+ */
+async function _exportAllTemplates() {
+    try {
+        if (typeof showToast === 'function') showToast('正在准备导出，请稍候...', 'info');
+        
+        // 1. 获取列表
+        const listResp = await apiFetch(`${API_BASE}/templates/list`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        const listParsed = await listResp.json();
+        const templatesList = listParsed.data || listParsed || [];
+        
+        if (templatesList.length === 0) {
+            if (typeof showToast === 'function') showToast('没有可导出的模板', 'warning');
+            return;
+        }
+
+        const fullTemplates = [];
+        // 2. 循环获取详情
+        for (const tpl of templatesList) {
+            const resp = await apiFetch(`${API_BASE}/templates/get`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: tpl.id }),
+            });
+            const result = await resp.json();
+            const tplData = result.data || result;
+            
+            fullTemplates.push({
+                name: tplData.name,
+                description: tplData.description || '',
+                thumbnail: tplData.thumbnail || '',
+                tags: tplData.tags || [],
+                createdAt: tplData.createdAt,
+                projectData: tplData.projectData,
+            });
+        }
+
+        // 3. 构建合集并导出
+        const exportObj = {
+            _format: 'videokit-template-collection',
+            _version: 1,
+            exportedAt: Date.now(),
+            count: fullTemplates.length,
+            templates: fullTemplates
+        };
+
+        const jsonStr = JSON.stringify(exportObj, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        a.download = `所有模板_${dateStr}_(${fullTemplates.length}个).vktpl`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        if (typeof showToast === 'function') showToast(`成功导出 ${fullTemplates.length} 个模板`, 'success');
+    } catch (e) {
+        if (typeof showToast === 'function') showToast('全部导出失败: ' + e.message, 'error');
+        else alert('全部导出失败: ' + e.message);
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+// 5. 启动时自动检测 hash 参数加载模板
+// ═══════════════════════════════════════════════════════
+
+function _checkHashForTemplate() {
+    const hash = window.location.hash; // e.g. #template=tpl_xxxxx
+    const match = hash.match(/template=([^&]+)/);
+    if (!match) return;
+
+    const templateId = match[1];
+    console.log('[Template] 检测到 URL hash 模板参数:', templateId);
+
+    // 等 DOM 和 app 初始化完成后加载
+    const tryLoad = () => {
+        if (typeof ReelsProject === 'undefined' || typeof apiFetch === 'undefined') {
+            setTimeout(tryLoad, 200);
+            return;
+        }
+        _loadTemplateInCurrentWindow(templateId);
+    };
+
+    // 延迟执行，确保 app.js 已经初始化
+    setTimeout(tryLoad, 500);
+}
+
+// DOM 加载后检测
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _checkHashForTemplate);
+} else {
+    _checkHashForTemplate();
+}

@@ -1,0 +1,12 @@
+{
+  "SourceHanSansSC-Bold.otf": {
+    "family": "Source Han Sans SC",
+    "weight": "700",
+    "style": "normal"
+  },
+  "SourceHanSansSC-Regular.otf": {
+    "family": "Source Han Sans SC",
+    "weight": "400",
+    "style": "normal"
+  }
+}

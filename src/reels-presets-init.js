@@ -1,0 +1,1885 @@
+/**
+ * reels-presets-init.js — 内置字幕预设 (已适配 1080×1920 竖屏)
+ * 
+ * 支持的动画类型:
+ *   none, fade, slide_up, slide_down, slide_left, slide_right,
+ *   pop, typewriter, char_bounce, letter_jump, metronome,
+ *   word_pop_random, word_pop_random_pulse, blur_sharp, holy_glow, floating, bullet_reveal, flash_highlight
+ *
+ * 每个预设都包含完整的差异化样式属性，
+ * 确保切换时能产生明显的视觉变化。
+ */
+
+const REELS_BUILTIN_PRESETS = {
+    // ━━━━━━━━━━━━━━━━━━━━━━ 基础系列 ━━━━━━━━━━━━━━━━━━━━━━
+    "默认白字": {
+        color_text: "#FFFFFF",
+        color_high: "#FFD700",
+        fontsize: 74,
+        bold: true,
+        italic: false,
+        letter_spacing: 0,
+        use_stroke: false,
+        color_outline: "#000000",
+        border_width: 3,
+        use_box: false,
+        shadow_blur: 0,
+        use_underline: false,
+        dynamic_box: false,
+        stroke_expand_enabled: false,
+        bg_gradient_enabled: false,
+        box_transition_enabled: false,
+        global_mask_enabled: false,
+        pos_y: 0.5,
+        wrap_width_percent: 90,
+        rotation: 0,
+        anim_in_type: "fade",
+        anim_in_duration: 0.3,
+        anim_out_type: "fade",
+        anim_out_duration: 0.25,
+    },
+
+    "黄字黑边 (经典)": {
+        color_text: "#FFD700",
+        color_high: "#FF4444",
+        fontsize: 74,
+        bold: true,
+        italic: false,
+        letter_spacing: 2,
+        use_stroke: true,
+        color_outline: "#000000",
+        border_width: 5,
+        use_box: false,
+        shadow_blur: 4,
+        color_shadow: "#000000",
+        use_underline: false,
+        dynamic_box: false,
+        stroke_expand_enabled: false,
+        global_mask_enabled: false,
+        pos_y: 0.75,
+        wrap_width_percent: 85,
+        anim_in_type: "pop",
+        anim_in_duration: 0.25,
+        anim_out_type: "fade",
+        anim_out_duration: 0.2,
+    },
+
+    // ━━━━━━━━━━━━━━━━━━━━━━ 高亮系列 ━━━━━━━━━━━━━━━━━━━━━━
+    "金色霓虹环境光": {
+        color_text: "#FFFFFF",
+        color_high: "#FFFFFF",
+        fontsize: 76,
+        bold: true,
+        italic: false,
+        letter_spacing: 1,
+        font_family: "Montserrat, system-ui, sans-serif",
+        use_stroke: false,
+        color_outline: "#11140A",
+        border_width: 0,
+        shadow_blur: 4,
+        shadow_offset_x: 1,
+        shadow_offset_y: 3,
+        opacity_shadow: 255,
+        color_shadow: "#11140A",
+        karaoke_highlight: true,
+        ambient_glow_enabled: true,
+        ambient_glow_color: "#FFFB8F",
+        ambient_glow_radius: 650,
+        ambient_glow_opacity: 0.65,
+        ambient_glow_blend_mode: "lighter",
+        ambient_lighting_enabled: true,
+        ambient_dark_color: "#000000",
+        ambient_dark_opacity: 0.70,
+        ambient_dark_center_opacity: 0.70,
+        ambient_dark_radius: 0.75,
+        use_box: false,
+        use_underline: false,
+        dynamic_box: false,
+        stroke_expand_enabled: false,
+        bg_gradient_enabled: false,
+        global_mask_enabled: false,
+        pos_y: 0.5,
+        wrap_width_percent: 85,
+        anim_in_type: "fade",
+        anim_in_duration: 0.2,
+        anim_out_type: "fade",
+        anim_out_duration: 0.2,
+    },
+
+    "卡拉OK高亮": {
+        color_text: "#FFFFFF",
+        color_high: "#00E5FF",
+        fontsize: 70,
+        bold: true,
+        italic: false,
+        use_stroke: true,
+        color_outline: "#1A1A3A",
+        border_width: 4,
+        use_box: false,
+        shadow_blur: 6,
+        color_shadow: "#0055AA",
+        use_underline: false,
+        dynamic_box: true,
+        color_high_bg: "#00E5FF",
+        dyn_box_anim: true,
+        dynamic_radius: 8,
+        high_padding: 6,
+        global_mask_enabled: false,
+        pos_y: 0.5,
+        wrap_width_percent: 90,
+        anim_in_type: "fade",
+        anim_in_duration: 0.2,
+        anim_out_type: "fade",
+        anim_out_duration: 0.2,
+    },
+
+    "节奏逐词": {
+        color_text: "#E0E0E0",
+        color_high: "#FFFFFF",
+        fontsize: 72,
+        bold: true,
+        italic: false,
+        letter_spacing: 1,
+        use_stroke: true,
+        color_outline: "#333333",
+        border_width: 3,
+        use_box: false,
+        shadow_blur: 3,
+        color_shadow: "#000000",
+        use_underline: false,
+        dynamic_box: true,
+        color_high_bg: "#FF6600",
+        dyn_box_anim: true,
+        dynamic_radius: 10,
+        high_padding: 5,
+        global_mask_enabled: false,
+        pos_y: 0.5,
+        wrap_width_percent: 85,
+        metronome_bpm: 120,
+        anim_in_type: "metronome",
+        anim_in_duration: 0.3,
+        anim_out_type: "fade",
+        anim_out_duration: 0.2,
+    },
+
+    "闪光高亮": {
+        color_text: "#FFFFFF",
+        color_high: "#FFEE00",
+        fontsize: 70,
+        bold: true,
+        italic: false,
+        letter_spacing: 0,
+        use_stroke: true,
+        color_outline: "#222222",
+        border_width: 3,
+        use_box: false,
+        shadow_blur: 4,
+        color_shadow: "#FFAA00",
+        use_underline: false,
+        dynamic_box: false,
+        global_mask_enabled: false,
+        flash_color: "#FFFFFF",
+        pos_y: 0.5,
+        wrap_width_percent: 90,
+        anim_in_type: "flash_highlight",
+        anim_in_duration: 0.25,
+        anim_out_type: "fade",
+        anim_out_duration: 0.2,
+    },
+
+    // ━━━━━━━━━━━━━━━━━━━━ 动画特效系列 ━━━━━━━━━━━━━━━━━━━━
+    "打字机模式": {
+        color_text: "#E0E0E0",
+        color_high: "#FFFFFF",
+        fontsize: 68,
+        bold: false,
+        italic: false,
+        letter_spacing: 1,
+        use_stroke: true,
+        color_outline: "#000000",
+        border_width: 2,
+        use_box: false,
+        shadow_blur: 0,
+        use_underline: true,
+        color_underline: "#FFD700",
+        dynamic_box: false,
+        global_mask_enabled: false,
+        pos_y: 0.5,
+        wrap_width_percent: 85,
+        anim_in_type: "typewriter",
+        anim_in_duration: 0.4,
+        anim_out_type: "fade",
+        anim_out_duration: 0.3,
+        typewriter_reveal_type: "word",
+        tw_unrevealed_opacity: 0,
+    },
+
+    "粉色气泡": {
+        color_text: "#FFFFFF",
+        color_high: "#FF69B4",
+        fontsize: 72,
+        bold: true,
+        italic: false,
+        letter_spacing: 0,
+        use_stroke: true,
+        color_outline: "#FF69B4",
+        border_width: 5,
+        use_box: false,
+        shadow_blur: 8,
+        color_shadow: "#FF1493",
+        use_underline: false,
+        dynamic_box: false,
+        stroke_expand_enabled: false,
+        global_mask_enabled: false,
+        pos_y: 0.55,
+        wrap_width_percent: 80,
+        char_bounce_height: 25,
+        anim_in_type: "char_bounce",
+        anim_in_duration: 0.35,
+        anim_out_type: "fade",
+        anim_out_duration: 0.3,
+    },
+
+    "逐字放大": {
+        color_text: "#FFFFFF",
+        color_high: "#FFD700",
+        fontsize: 74,
+        bold: true,
+        italic: false,
+        letter_spacing: 2,
+        use_stroke: true,
+        color_outline: "#111111",
+        border_width: 4,
+        use_box: false,
+        shadow_blur: 5,
+        color_shadow: "#000000",
+        use_underline: false,
+        dynamic_box: false,
+        global_mask_enabled: false,
+        letter_jump_scale: 1.6,
+        pos_y: 0.5,
+        wrap_width_percent: 85,
+        anim_in_type: "letter_jump",
+        anim_in_duration: 0.3,
+        anim_out_type: "fade",
+        anim_out_duration: 0.25,
+    },
+
+    "逐词弹出(随机大小)": {
+        color_text: "#FFFFFF",
+        color_high: "#FFD700",
+        fontsize: 74,
+        bold: true,
+        italic: false,
+        letter_spacing: 1,
+        use_stroke: true,
+        color_outline: "#000000",
+        border_width: 4,
+        use_box: false,
+        shadow_blur: 4,
+        color_shadow: "#000000",
+        use_underline: false,
+        dynamic_box: false,
+        global_mask_enabled: false,
+        pos_y: 0.5,
+        wrap_width_percent: 88,
+        anim_in_type: "word_pop_random",
+        anim_in_duration: 0.24,
+        anim_out_type: "fade",
+        anim_out_duration: 0.2,
+        word_pop_random_min_scale: 0.7,
+        word_pop_random_max_scale: 1.34,
+        word_pop_random_duration: 0.24,
+        word_pop_random_unread_opacity: 0.0,
+        word_pop_random_read_opacity: 1.0,
+    },
+
+    "逐词弹出(随机回弹)": {
+        color_text: "#FFFFFF",
+        color_high: "#FFD700",
+        fontsize: 74,
+        bold: true,
+        italic: false,
+        letter_spacing: 1,
+        use_stroke: true,
+        color_outline: "#000000",
+        border_width: 4,
+        use_box: false,
+        shadow_blur: 4,
+        color_shadow: "#000000",
+        use_underline: false,
+        dynamic_box: false,
+        global_mask_enabled: false,
+        pos_y: 0.5,
+        wrap_width_percent: 88,
+        anim_in_type: "word_pop_random_pulse",
+        anim_in_duration: 0.24,
+        anim_out_type: "fade",
+        anim_out_duration: 0.2,
+        word_pop_random_pulse_min_scale: 1.08,
+        word_pop_random_pulse_max_scale: 1.40,
+        word_pop_random_pulse_duration: 0.24,
+        word_pop_random_unread_opacity: 0.0,
+        word_pop_random_read_opacity: 1.0,
+    },
+
+    "黄线框高亮_逐词弹出": {
+        font_family: "Segoe UI",
+        font_weight: 900,
+        color_text: "#FFFFFF",
+        color_high: "#FFD700",
+        fontsize: 66,
+        bold: true,
+        italic: true,
+        letter_spacing: 1,
+        use_stroke: false,
+        border_width: 0,
+        use_box: false,
+        shadow_blur: 4,
+        color_shadow: "#000000",
+        dynamic_box: true,
+        color_high_bg: "#FFD700",
+        opacity_high_bg: 255,
+        dynamic_radius: 4,
+        high_padding: 6,
+        dynamic_box_stroke: true,
+        dynamic_box_stroke_width: 3,
+        karaoke_highlight: true,
+        pos_y: 0.5,
+        wrap_width_percent: 85,
+        anim_in_type: "word_pop_random_pulse",
+        anim_in_duration: 0.22,
+        anim_out_type: "fade",
+        anim_out_duration: 0.2,
+    },
+
+    // 单词逐个出现，画面只保留正在朗读的词；底色按当前词宽自动伸缩。
+    "单词聚焦_自适应色块": {
+        font_family: "Segoe UI",
+        font_weight: 900,
+        color_text: "#FFFFFF",
+        color_high: "#FFFFFF",
+        fontsize: 76,
+        bold: true,
+        italic: false,
+        letter_spacing: 1,
+        use_stroke: true,
+        color_outline: "#171717",
+        border_width: 3,
+        use_box: false,
+        shadow_blur: 5,
+        color_shadow: "#000000",
+        opacity_shadow: 170,
+        shadow_offset_x: 2,
+        shadow_offset_y: 3,
+        dynamic_box: true,
+        color_high_bg: "#FFD700",
+        opacity_high_bg: 255,
+        dynamic_radius: 8,
+        high_padding: 12,
+        dynamic_box_stroke: false,
+        dyn_box_anim: true,
+        karaoke_highlight: true,
+        only_show_active_word: true,
+        pos_y: 0.5,
+        wrap_width_percent: 85,
+        anim_in_type: "word_pop_random_pulse",
+        anim_in_duration: 0.22,
+        anim_out_type: "fade",
+        anim_out_duration: 0.2,
+        word_pop_random_pulse_min_scale: 1.05,
+        word_pop_random_pulse_max_scale: 1.35,
+        word_pop_random_pulse_duration: 0.22,
+        word_pop_random_unread_opacity: 0.0,
+        word_pop_random_read_opacity: 0.0,
+    },
+
+    "Hormozi 风格字幕": {
+        font_family: "Anton",
+        font_weight: 700,
+        color_text: "#FFFFFF",
+        color_high: "#FFFFFF",
+        fontsize: 86,
+        bold: true,
+        italic: false,
+        letter_spacing: 1,
+        use_stroke: true,
+        color_outline: "#000000",
+        border_width: 7,
+        use_box: false,
+        shadow_blur: 3,
+        color_shadow: "#000000",
+        use_underline: false,
+        dynamic_box: false,
+        global_mask_enabled: false,
+        block_typography_enabled: true,
+        block_scale_min: 0.78,
+        block_scale_max: 1.62,
+        pos_y: 0.52,
+        wrap_width_percent: 40,
+        line_spacing: 4,
+        anim_in_type: "word_pop_random",
+        anim_in_duration: 0.2,
+        anim_out_type: "fade",
+        anim_out_duration: 0.16,
+        word_pop_random_min_scale: 0.7,
+        word_pop_random_max_scale: 1.42,
+        word_pop_random_duration: 0.2,
+        word_pop_random_unread_opacity: 0.0,
+        word_pop_random_read_opacity: 1.0,
+    },
+
+    // ━━━━━━━━━━━━━━━━━━━━━ 滑动系列 ━━━━━━━━━━━━━━━━━━━━━━
+    "上滑入场": {
+        color_text: "#FFFFFF",
+        color_high: "#87CEEB",
+        fontsize: 68,
+        bold: true,
+        italic: false,
+        letter_spacing: 0,
+        use_stroke: true,
+        color_outline: "#000000",
+        border_width: 3,
+        use_box: false,
+        shadow_blur: 3,
+        color_shadow: "#000000",
+        use_underline: false,
+        dynamic_box: false,
+        global_mask_enabled: false,
+        pos_y: 0.5,
+        wrap_width_percent: 90,
+        anim_in_type: "slide_up",
+        anim_in_duration: 0.3,
+        anim_out_type: "slide_down",
+        anim_out_duration: 0.25,
+    },
+
+    "左滑入场": {
+        color_text: "#FFFFFF",
+        color_high: "#90EE90",
+        fontsize: 68,
+        bold: true,
+        italic: false,
+        letter_spacing: 0,
+        use_stroke: true,
+        color_outline: "#003300",
+        border_width: 3,
+        use_box: false,
+        shadow_blur: 4,
+        color_shadow: "#004400",
+        use_underline: false,
+        dynamic_box: false,
+        global_mask_enabled: false,
+        pos_y: 0.5,
+        wrap_width_percent: 85,
+        anim_in_type: "slide_left",
+        anim_in_duration: 0.3,
+        anim_out_type: "slide_right",
+        anim_out_duration: 0.25,
+    },
+
+    // ━━━━━━━━━━━━━━━━━━━━ 特殊风格系列 ━━━━━━━━━━━━━━━━━━━━
+    "黑底白字 (新闻)": {
+        color_text: "#FFFFFF",
+        color_high: "#FFD700",
+        fontsize: 60,
+        bold: true,
+        italic: false,
+        letter_spacing: 1,
+        use_stroke: false,
+        border_width: 0,
+        use_box: true,
+        color_bg: "#000000",
+        opacity_bg: 200,
+        box_padding_x: 20,
+        box_padding_y: 12,
+        box_radius: 0,
+        box_blur: 0,
+        shadow_blur: 0,
+        use_underline: false,
+        dynamic_box: false,
+        global_mask_enabled: false,
+        pos_y: 0.82,
+        wrap_width_percent: 95,
+        anim_in_type: "slide_up",
+        anim_in_duration: 0.3,
+        anim_out_type: "slide_down",
+        anim_out_duration: 0.25,
+    },
+
+    "阴影沉浸式": {
+        color_text: "#FFFFFF",
+        color_high: "#AAEEFF",
+        fontsize: 68,
+        bold: false,
+        italic: true,
+        letter_spacing: 2,
+        use_stroke: false,
+        border_width: 0,
+        use_box: false,
+        shadow_blur: 12,
+        color_shadow: "#000000",
+        use_underline: false,
+        dynamic_box: false,
+        global_mask_enabled: true,
+        global_mask_color: "#000000",
+        global_mask_opacity: 0.35,
+        pos_y: 0.5,
+        wrap_width_percent: 80,
+        anim_in_type: "blur_sharp",
+        anim_in_duration: 0.4,
+        anim_out_type: "fade",
+        anim_out_duration: 0.3,
+        blur_sharp_max: 20,
+    },
+
+    "圣光降临": {
+        color_text: "#FFFFF0",
+        color_high: "#FFD700",
+        fontsize: 72,
+        bold: true,
+        italic: false,
+        letter_spacing: 3,
+        use_stroke: true,
+        color_outline: "#8B7500",
+        border_width: 2,
+        use_box: false,
+        shadow_blur: 10,
+        color_shadow: "#FFD700",
+        use_underline: false,
+        dynamic_box: false,
+        global_mask_enabled: false,
+        holy_glow_radius: 10,
+        holy_glow_color: "#FFFFAA",
+        pos_y: 0.45,
+        wrap_width_percent: 80,
+        anim_in_type: "holy_glow",
+        anim_in_duration: 0.5,
+        anim_out_type: "fade",
+        anim_out_duration: 0.4,
+    },
+
+    "悬浮漂移": {
+        color_text: "#FFFFFF",
+        color_high: "#C8A2FF",
+        fontsize: 70,
+        bold: false,
+        italic: true,
+        letter_spacing: 1,
+        use_stroke: true,
+        color_outline: "#4B0082",
+        border_width: 3,
+        use_box: false,
+        shadow_blur: 6,
+        color_shadow: "#6A0DAD",
+        use_underline: false,
+        dynamic_box: false,
+        global_mask_enabled: false,
+        floating_amplitude: 12,
+        floating_period: 2.5,
+        pos_y: 0.5,
+        wrap_width_percent: 85,
+        anim_in_type: "floating",
+        anim_in_duration: 0.35,
+        anim_out_type: "fade",
+        anim_out_duration: 0.3,
+    },
+
+    "逐行出现": {
+        color_text: "#FFFFFF",
+        color_high: "#FF6347",
+        fontsize: 66,
+        bold: true,
+        italic: false,
+        letter_spacing: 0,
+        use_stroke: true,
+        color_outline: "#333333",
+        border_width: 3,
+        use_box: false,
+        shadow_blur: 3,
+        color_shadow: "#000000",
+        use_underline: false,
+        dynamic_box: false,
+        global_mask_enabled: false,
+        pos_y: 0.5,
+        wrap_width_percent: 88,
+        anim_in_type: "bullet_reveal",
+        anim_in_duration: 0.3,
+        anim_out_type: "fade",
+        anim_out_duration: 0.25,
+    },
+
+    // ━━━━━━━━━━━━━━━━━━━━━ 复合风格系列 ━━━━━━━━━━━━━━━━━━━━
+    "渐变蓝色框": {
+        color_text: "#FFFFFF",
+        color_high: "#00BFFF",
+        fontsize: 64,
+        bold: true,
+        italic: false,
+        letter_spacing: 1,
+        use_stroke: false,
+        border_width: 0,
+        use_box: true,
+        color_bg: "#0A3D63",
+        opacity_bg: 220,
+        box_padding_x: 18,
+        box_padding_y: 10,
+        box_radius: 12,
+        box_blur: 4,
+        shadow_blur: 0,
+        bg_gradient_enabled: true,
+        bg_gradient_type: "linear_h",
+        bg_gradient_colors: "#1A5276,#2E86C1",
+        bg_gradient_highlight: true,
+        use_underline: false,
+        dynamic_box: false,
+        global_mask_enabled: false,
+        pos_y: 0.8,
+        wrap_width_percent: 90,
+        anim_in_type: "pop",
+        anim_in_duration: 0.3,
+        anim_out_type: "fade",
+        anim_out_duration: 0.25,
+    },
+
+    "霓虹蓝粉渐变框": {
+        font_family: "Segoe UI",
+        font_weight: 900,
+        color_text: "#FFFFFF",
+        color_high: "#FFFFFF",
+        fontsize: 58,
+        bold: true,
+        italic: false,
+        letter_spacing: 0,
+        use_stroke: false,
+        border_width: 0,
+        use_box: true,
+        color_bg: "#1e70ff",
+        opacity_bg: 255,
+        box_padding_x: 24,
+        box_padding_y: 15,
+        box_radius: 12,
+        box_blur: 0,
+        shadow_blur: 0,
+        bg_gradient_enabled: true,
+        bg_gradient_type: "linear_h",
+        bg_gradient_colors: "#1e70ff,#9c42c7,#ff2e93",
+        bg_gradient_highlight: false,
+        use_underline: false,
+        dynamic_box: false,
+        global_mask_enabled: false,
+        pos_y: 0.5,
+        wrap_width_percent: 85,
+        anim_in_type: "pop",
+        anim_in_duration: 0.3,
+        anim_out_type: "fade",
+        anim_out_duration: 0.25,
+    },
+
+    "霓虹多层描边": {
+        color_text: "#FFFFFF",
+        color_high: "#FF00FF",
+        fontsize: 74,
+        bold: true,
+        italic: false,
+        letter_spacing: 2,
+        use_stroke: true,
+        color_outline: "#FF00FF",
+        border_width: 2,
+        use_box: false,
+        shadow_blur: 8,
+        color_shadow: "#FF00FF",
+        stroke_expand_enabled: true,
+        stroke_expand_layers: 3,
+        stroke_expand_step: 4,
+        stroke_expand_feather: 6,
+        stroke_expand_colors: "#FF00FF,#00FFFF,#FF6600",
+        use_underline: false,
+        dynamic_box: false,
+        global_mask_enabled: true,
+        global_mask_color: "#0A0A1A",
+        global_mask_opacity: 0.4,
+        pos_y: 0.5,
+        wrap_width_percent: 80,
+        anim_in_type: "pop",
+        anim_in_duration: 0.3,
+        anim_out_type: "fade",
+        anim_out_duration: 0.25,
+    },
+
+    "红色警报": {
+        color_text: "#FF3333",
+        color_high: "#FFFFFF",
+        fontsize: 76,
+        bold: true,
+        italic: false,
+        letter_spacing: 3,
+        use_stroke: true,
+        color_outline: "#660000",
+        border_width: 4,
+        use_box: false,
+        shadow_blur: 6,
+        color_shadow: "#FF0000",
+        use_underline: true,
+        color_underline: "#FF0000",
+        dynamic_box: false,
+        global_mask_enabled: false,
+        pos_y: 0.5,
+        wrap_width_percent: 85,
+        anim_in_type: "pop",
+        anim_in_duration: 0.2,
+        anim_out_type: "fade",
+        anim_out_duration: 0.15,
+    },
+    "全屏打字机_金黄光标": {
+        fullpage_typewriter: true,
+        fullpage_typewriter_reveal_type: "char",
+        fullpage_typewriter_cursor: true,
+        fullpage_typewriter_cursor_char: "|",
+        fullpage_typewriter_cursor_color: "#FFD700",
+        tw_unrevealed_opacity: 0,
+        fontsize: 58,
+        color_text: "#FFFFFF",
+        use_box: true,
+        color_bg: "#000000",
+        opacity_bg: 180,
+        box_radius: 12,
+        box_padding_x: 24,
+        box_padding_y: 20,
+        line_spacing: 8,
+        global_mask_enabled: true,
+        global_mask_color: "#000000",
+        global_mask_opacity: 0.4,
+        pos_y: 0.5,
+        wrap_width_percent: 85,
+        use_stroke: false,
+        anim_in_type: "none",
+        anim_out_type: "none"
+    },
+    "随机分散气泡卡片": {
+        anim_in_type: "scatter_pop",
+        scatter_max_words: 3,
+        scatter_min_scale: 0.9,
+        scatter_max_scale: 1.4,
+        scatter_min_rotate: -8,
+        scatter_max_rotate: 8,
+        scatter_accum_prob: 0.5,
+        use_box: true,
+        color_bg: "#6A0DAD",
+        opacity_bg: 220,
+        box_radius: 12,
+        box_padding_x: 16,
+        box_padding_y: 12,
+        color_text: "#FFFFFF",
+        color_high: "#FFD700",
+        fontsize: 52,
+        bold: true,
+        use_stroke: false,
+        anim_out_type: "none"
+    },
+    "随机单词定位": {
+        anim_in_type: "word_random_position",
+        scatter_seed: 1,
+        scatter_min_scale: 0.95,
+        scatter_max_scale: 1.35,
+        scatter_min_rotate: 0,
+        scatter_max_rotate: 0,
+        scatter_area_left: 15,
+        scatter_area_right: 85,
+        scatter_area_top: 25,
+        scatter_area_bottom: 75,
+        random_position_use_layout_range: true,
+        random_position_height_percent: 40,
+        word_pop_random_duration: 0.16,
+        font_family: "Anton",
+        font_weight: 700,
+        color_text: "#FFFFFF",
+        color_high: "#FFFFFF",
+        fontsize: 82,
+        bold: true,
+        letter_spacing: 1,
+        use_stroke: true,
+        color_outline: "#000000",
+        border_width: 7,
+        use_box: false,
+        shadow_blur: 3,
+        color_shadow: "#000000",
+        pos_y: 0.5,
+        wrap_width_percent: 40,
+        anim_out_type: "none"
+    },
+    "硬阴影_黄白斜体": {
+        font_family: "Segoe UI",
+        font_weight: 900,
+        color_text: "#FFFFFF",
+        color_high: "#FFD700",
+        fontsize: 76,
+        bold: true,
+        italic: true,
+        letter_spacing: 1,
+        use_stroke: true,
+        color_outline: "#000000",
+        border_width: 3,
+        use_box: false,
+        shadow_blur: 0,
+        color_shadow: "#111111",
+        shadow_offset_x: 6,
+        shadow_offset_y: 6,
+        opacity_shadow: 255,
+        pos_y: 0.5,
+        wrap_width_percent: 85,
+        anim_in_type: "word_pop_random_pulse",
+        anim_in_duration: 0.22,
+        anim_out_type: "fade",
+        anim_out_duration: 0.2,
+    },
+    "撞色黄底框高亮": {
+        font_family: "Segoe UI",
+        font_weight: 900,
+        color_text: "#FFFFFF",
+        color_high: "#FFFFFF",
+        fontsize: 66,
+        bold: true,
+        italic: false,
+        letter_spacing: 1,
+        use_stroke: false,
+        border_width: 0,
+        use_box: false,
+        shadow_blur: 0,
+        dynamic_box: true,
+        color_high_bg: "#FFD700",
+        opacity_high_bg: 255,
+        dynamic_radius: 2,
+        high_padding: 8,
+        dynamic_box_stroke: false,
+        dyn_box_anim: false,
+        pos_y: 0.5,
+        wrap_width_percent: 85,
+        anim_in_type: "none",
+        anim_in_duration: 0,
+        anim_out_type: "none",
+        anim_out_duration: 0,
+    },
+    "红橙渐变_硬阴影": {
+        font_family: "Segoe UI",
+        font_weight: 900,
+        color_text: "#ff2a85,#ff9f21",
+        color_high: "#FFFFFF",
+        fontsize: 76,
+        bold: true,
+        italic: false,
+        letter_spacing: 1,
+        use_stroke: true,
+        color_outline: "#000000",
+        border_width: 3,
+        use_box: false,
+        shadow_blur: 0,
+        color_shadow: "#111111",
+        shadow_offset_x: 4,
+        shadow_offset_y: 4,
+        opacity_shadow: 255,
+        pos_y: 0.5,
+        wrap_width_percent: 85,
+        anim_in_type: "word_pop_random_pulse",
+        anim_in_duration: 0.22,
+        anim_out_type: "fade",
+        anim_out_duration: 0.2,
+    },
+    "霓虹双色发光": {
+        font_family: "Segoe UI",
+        font_weight: 900,
+        color_text: "#FFFFFF",
+        color_high: "#FFFFFF",
+        fontsize: 72,
+        bold: true,
+        italic: false,
+        letter_spacing: 1,
+        use_stroke: false,
+        border_width: 0,
+        use_box: false,
+        shadow_blur: 15,
+        color_shadow: "#bd00ff,#00f0ff",
+        shadow_offset_x: 0,
+        shadow_offset_y: 0,
+        opacity_shadow: 255,
+        pos_y: 0.5,
+        wrap_width_percent: 85,
+        anim_in_type: "word_pop_random_pulse",
+        anim_in_duration: 0.22,
+        anim_out_type: "fade",
+        anim_out_duration: 0.2,
+    },
+    "风驰幻影_白斜体": {
+        font_family: "Segoe UI",
+        font_weight: 900,
+        color_text: "#FFFFFF",
+        color_high: "#FFFFFF",
+        fontsize: 72,
+        bold: true,
+        italic: true,
+        letter_spacing: 2,
+        use_stroke: false,
+        border_width: 0,
+        use_box: false,
+        shadow_blur: 0,
+        speed_trail_enabled: true,
+        speed_trail_layers: 6,
+        speed_trail_step: -6,
+        speed_trail_color: "#FFFFFF",
+        speed_trail_opacity: 120,
+        pos_y: 0.5,
+        wrap_width_percent: 85,
+        anim_in_type: "pop",
+        anim_in_duration: 0.25,
+        anim_out_type: "fade",
+        anim_out_duration: 0.2,
+    }
+};
+
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 内置覆层组预设（文字卡片模版）
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+window.REELS_BUILTIN_PRESETS = REELS_BUILTIN_PRESETS;
+
+const REELS_BUILTIN_OVERLAY_GROUP_PRESETS = {
+
+    // ━━━━━━━━━━━━━━━━━━━━━━ 参考图模版 ━━━━━━━━━━━━━━━━━━━━━━
+
+    "01-金黄横幅+白卡祈祷文": [
+        {
+            type: "textcard",
+            x: 40, y: 180, w: 1000, h: 0,
+            rotation: 0, opacity: 255,
+            start: 0, end: 9999,
+
+            // 参考图占位文字
+            title_text: "IN MARCH, READ THIS JUST ONCE AND IT WILL COME TO PASS IMMEDIATELY",
+            body_text: "Lord, in the name of Jesus, March has begun. I rebuke every spiritual curse, evil eye, jealousy, sickness, and confusion coming against me and my family! I cut off every hidden opening and destroy every trap set by the enemy.",
+            footer_text: "I declare: the precious blood of Jesus covers my spouse, my children, and everyone I love. Angels guard every door and window—the enemy cannot come near, not even one step! Darkness cannot enter.\nLord, bring breakthrough to everyone who writes \"Amen\" and render every curse powerless!",
+            fixed_text: false, // 允许被批量表格内容替换
+
+            // 卡片底色关闭（使用独立区段背景）
+            card_enabled: false,
+            card_color: "#0A1128", card_opacity: 0,
+            radius_tl: 0, radius_tr: 0, radius_bl: 0, radius_br: 0,
+
+            // ── 标题：金黄横幅 ──
+            title_font_family: "Montserrat",
+            title_fontsize: 52,
+            title_font_weight: 900,
+            title_bold: true, title_italic: false,
+            title_color: "#2B1B10",
+            title_align: "center", title_valign: "top",
+            title_uppercase: true,
+            title_letter_spacing: 1, title_line_spacing: 6,
+
+            // ── 正文：白色半透明卡片 ──
+            body_font_family: "Noto Sans SC",
+            body_fontsize: 38,
+            body_font_weight: 400,
+            body_bold: false, body_italic: false,
+            body_color: "#2B1B10",
+            body_align: "left", body_valign: "top",
+            body_letter_spacing: 0, body_line_spacing: 10,
+
+            // ── 结尾：白色半透明卡片 ──
+            footer_font_family: "Noto Sans SC",
+            footer_fontsize: 36,
+            footer_font_weight: 400,
+            footer_bold: false, footer_italic: false,
+            footer_color: "#2B1B10",
+            footer_align: "left", footer_valign: "top",
+            footer_letter_spacing: 0, footer_line_spacing: 8,
+
+            // 效果
+            independent_effects: true,
+            text_stroke_color: "#000000", text_stroke_width: 0,
+            text_shadow_color: "#2B1B10", text_shadow_blur: 0,
+            text_shadow_x: 0, text_shadow_y: 0,
+
+            // ── 独立区段背景 ──
+            title_bg_enabled: true, title_bg_mode: "block",
+            title_bg_color: "#FFD700", title_bg_opacity: 95, title_bg_radius: 16,
+            title_bg_pad_h: 24, title_bg_pad_top: 18, title_bg_pad_bottom: 18,
+
+            body_bg_enabled: true, body_bg_mode: "block",
+            body_bg_color: "#FFFFFF", body_bg_opacity: 80, body_bg_radius: 20,
+            body_bg_pad_h: 28, body_bg_pad_top: 24, body_bg_pad_bottom: 24,
+
+            footer_bg_enabled: true, footer_bg_mode: "block",
+            footer_bg_color: "#FFFFFF", footer_bg_opacity: 80, footer_bg_radius: 20,
+            footer_bg_pad_h: 28, footer_bg_pad_top: 24, footer_bg_pad_bottom: 24,
+
+            // 布局
+            auto_fit: true, auto_center_v: true,
+            padding_top: 30, padding_bottom: 30, padding_left: 30, padding_right: 30,
+            title_body_gap: 20, body_footer_gap: 20,
+            max_height: 1600, auto_shrink: true,
+            title_max_lines: 5, min_fontsize: 20,
+            fullscreen_mask: false, offset_x: 0, offset_y: 0,
+
+            // 无动画
+            anim_in_type: "none", anim_out_type: "none",
+            anim_in_duration: 0, anim_out_duration: 0,
+        }
+    ],
+
+    "03-行内紧贴连体卡片(三段式)": [
+        {
+            type: "textcard",
+            x: 50, y: 150, w: 980, h: 0,
+            rotation: 0, opacity: 255,
+            start: 0, end: 9999,
+
+            title_text: "Huwag mo munang\ni-scroll palayo—",
+            body_text: "Kung napunta sa feed mo\nang mensaheng ito,\nibahagi mo agad sa mga\nmahal mo sa buhay.",
+            footer_text: "Nawa'y dumating ang\nsunod-sunod na\npagpapala sa iyo ngayon.",
+            fixed_text: false,
+
+            card_enabled: false,
+
+            // ── 标题：紧贴黄底黑字 ──
+            title_font_family: "Montserrat",
+            title_fontsize: 66,
+            title_font_weight: 900,
+            title_bold: true, title_italic: false,
+            title_color: "#2B1B10",
+            title_align: "center", title_valign: "top",
+            title_uppercase: false,
+            title_letter_spacing: -1, title_line_spacing: 12,
+
+            title_bg_enabled: true, 
+            title_bg_mode: "inline-joined", 
+            title_bg_color: "#FFE600",
+            title_bg_opacity: 100, 
+            title_bg_radius: 20, 
+            title_bg_pad_h: 24, title_bg_pad_top: 16, title_bg_pad_bottom: 16,
+
+            // ── 正文：紧贴白底黑字 ──
+            body_font_family: "Montserrat",
+            body_fontsize: 56,
+            body_font_weight: 700,
+            body_bold: true, body_italic: false,
+            body_color: "#2B1B10",
+            body_align: "center", body_valign: "top",
+            body_letter_spacing: 0, body_line_spacing: 10,
+
+            body_bg_enabled: true, 
+            body_bg_mode: "inline-joined", 
+            body_bg_color: "#FFFFFF",
+            body_bg_opacity: 100, 
+            body_bg_radius: 16, 
+            body_bg_pad_h: 20, body_bg_pad_top: 12, body_bg_pad_bottom: 12,
+
+            // ── 结尾：紧贴紫底白字 ──
+            footer_font_family: "Montserrat",
+            footer_fontsize: 56,
+            footer_font_weight: 700,
+            footer_bold: true, footer_italic: false,
+            footer_color: "#FFFFFF",
+            footer_align: "center", footer_valign: "top",
+            footer_letter_spacing: 0, footer_line_spacing: 10,
+
+            footer_bg_enabled: true, 
+            footer_bg_mode: "inline-joined", 
+            footer_bg_color: "#6A0DAD",
+            footer_bg_opacity: 100, 
+            footer_bg_radius: 16, 
+            footer_bg_pad_h: 20, footer_bg_pad_top: 12, footer_bg_pad_bottom: 12,
+
+            independent_effects: true,
+            text_stroke_width: 0, text_shadow_blur: 0,
+
+            // 布局
+            auto_fit: true, auto_center_v: true,
+            padding_top: 20, padding_bottom: 20, padding_left: 20, padding_right: 20,
+            title_body_gap: 30, body_footer_gap: 30,
+            
+            anim_in_type: "none", anim_out_type: "none"
+        }
+    ],
+
+    "04-西文深褐字(白发光)": [
+        {
+            type: "textcard",
+            x: 60, y: 150, w: 960, h: 0,
+            rotation: 0, opacity: 255,
+            start: 0, end: 9999,
+
+            title_text: "ORACIÓN DE LA\nMAÑANA",
+            body_text: "QUERIDO DIOS HOY TE DOY GRACIAS PORQUE... ME DESPERTÉ. ESTOY CON SALUD. ESTOY VIVO(A). SOY BENDECIDO(A). TE PIDO PERDÓN POR TODAS MIS QUEJAS. TE PIDO PERDÓN POR HABER DUDADO DE TI. HOY RECONOZCO QUE TODO ESTÁ EN TUS MANOS. AYÚDAME A CAMINAR EN TU PROPÓSITO Y A ENCONTRAR FUERZA Y CALMA EN TU PRESENCIA. SEÑOR, TE AMO Y TE PROMETO QUE COMPARTIRÉ ESTA ORACIÓN CON MIS AMIGOS Y HONRARÉ TU NOMBRE. AMÉN. EN EL NOMBRE DE DIOS, TOMA 1 MINUTO PARA ENVIAR ESTA ORACIÓN A LA PERSONA QUE DESEAS QUE DIOS BENDIGA. Y REPITE ESTO: DIOS, TÚ ERES MI FUERZA, TE NECESITO, POR FAVOR, LÍBRAME A MI Y A MI FAMILIA DE TODO MAL. AMÉN.",
+            footer_text: "",
+            fixed_text: false,
+
+            card_enabled: false,
+
+            // ── 标题 ──
+            title_font_family: "Oswald, Impact, Montserrat, sans-serif",
+            title_fontsize: 110,
+            title_font_weight: 900,
+            title_bold: true, title_italic: false,
+            title_color: "#2B1B10",
+            title_align: "center", title_valign: "top",
+            title_uppercase: true,
+            title_letter_spacing: -2, title_line_spacing: 10,
+            title_bg_enabled: false,
+
+            // ── 正文 ──
+            body_font_family: "Montserrat, Noto Sans SC, sans-serif",
+            body_fontsize: 40,
+            body_font_weight: 700,
+            body_bold: true, body_italic: false,
+            body_color: "#2B1B10",
+            body_align: "center", body_valign: "top",
+            body_uppercase: true,
+            body_letter_spacing: 0, body_line_spacing: 12,
+            body_bg_enabled: false,
+            
+            // ── 特效：白发光 ──
+            independent_effects: false,
+            text_stroke_width: 0,
+            text_shadow_color: "rgba(255, 255, 255, 0.9)", 
+            text_shadow_blur: 24,
+            text_shadow_x: 0, text_shadow_y: 0,
+
+            // 布局
+            auto_fit: true, auto_center_v: true,
+            padding_top: 20, padding_bottom: 20, padding_left: 40, padding_right: 40,
+            title_body_gap: 40, body_footer_gap: 0,
+            
+            anim_in_type: "none", anim_out_type: "none"
+        }
+    ],
+
+    "05-手写圆体白字(深蓝发光)": [
+        {
+            type: "textcard",
+            x: 60, y: 150, w: 960, h: 0,
+            rotation: 0, opacity: 255,
+            start: 0, end: 9999,
+
+            title_text: "IN THE NAME OF JESUS,\nDO NOT IGNORE THIS\nPRAYER",
+            body_text: "Lord, thank You for carrying me through another month. It's by Your grace that I have made it this far. It's Your love and kindness that keep me moving forward. Lord, sometimes I overthink. I worry too much, I plan too far ahead, and I try to take control of things I was never meant to carry. But You remind me—everything is in Your hands. You've made a way before, and I trust You will do it again. If You've woken me up today, it means You still have a purpose for me. So help me, Lord. Fill my heart with peace, hope, and courage. God, I love You. Please give me the courage to pass this prayer to at least one person. Put \"Amen\" to disappoint Satan!",
+            footer_text: "",
+            fixed_text: false,
+
+            card_enabled: false,
+
+            // ── 标题 ──
+            title_font_family: "Comic Sans MS, Balsamiq Sans, cursive",
+            title_fontsize: 66,
+            title_font_weight: 900,
+            title_bold: true, title_italic: false,
+            title_color: "#FFFFFF",
+            title_align: "center", title_valign: "top",
+            title_uppercase: true,
+            title_letter_spacing: 0, title_line_spacing: 10,
+            title_bg_enabled: false,
+
+            // ── 正文 ──
+            body_font_family: "Comic Sans MS, Balsamiq Sans, cursive",
+            body_fontsize: 42,
+            body_font_weight: 700,
+            body_bold: true, body_italic: false,
+            body_color: "#FFFFFF",
+            body_align: "center", body_valign: "top",
+            body_uppercase: false,
+            body_letter_spacing: 0, body_line_spacing: 14,
+            body_bg_enabled: false,
+            
+            // ── 特效：黑发光 ──
+            independent_effects: false,
+            text_stroke_width: 0,
+            text_shadow_color: "rgba(10, 17, 40, 0.9)", 
+            text_shadow_blur: 24,
+            text_shadow_x: 0, text_shadow_y: 0,
+
+            // 布局
+            auto_fit: true, auto_center_v: true,
+            padding_top: 20, padding_bottom: 20, padding_left: 40, padding_right: 40,
+            title_body_gap: 30, body_footer_gap: 0,
+            
+            anim_in_type: "none", anim_out_type: "none"
+        }
+    ],
+
+    "06-经典衬线深褐字(无底)": [
+        {
+            type: "textcard",
+            x: 60, y: 150, w: 960, h: 0,
+            rotation: 0, opacity: 255,
+            start: 0, end: 9999,
+
+            title_text: "When You Pray This,\nMiracles Begin",
+            body_text: "Imagine Jesus smiling because you decided to pass this along and bless another heart. Dear God, clear my mind of any distractions. Things are getting overwhelming and I have been overthinking more than usual. I humbly come to You in prayer today to ask that You grant me serenity and a clear mind. Clear my mind from all chaotic and negative thoughts. Help me refrain from overthinking and worrying about the things that I can not change. I give up on trying to have control of everything around me and leave it in Your hands. Embrace me with Your perfect love. Replace all the ruckus in my mind with beautiful thoughts and creative ideas. Most importantly ensure that I never stray away from my purpose and Your plan for me. If God is your peace today, send this prayer to someone important and see how God will work in your life. Put Amen.",
+            footer_text: "",
+            fixed_text: false,
+
+            card_enabled: false,
+
+            // ── 标题 ──
+            title_font_family: "Georgia, Times New Roman, Playfair Display, serif",
+            title_fontsize: 70,
+            title_font_weight: 900,
+            title_bold: true, title_italic: false,
+            title_color: "#2B1B10",
+            title_align: "center", title_valign: "top",
+            title_uppercase: false,
+            title_letter_spacing: 0, title_line_spacing: 12,
+            title_bg_enabled: false,
+
+            // ── 正文 ──
+            body_font_family: "Georgia, Times New Roman, Playfair Display, serif",
+            body_fontsize: 40,
+            body_font_weight: 700,
+            body_bold: true, body_italic: false,
+            body_color: "#2B1B10",
+            body_align: "center", body_valign: "top",
+            body_uppercase: false,
+            body_letter_spacing: 0, body_line_spacing: 14,
+            body_bg_enabled: false,
+            
+            // ── 特效：极弱白发光（为了复杂背景可读性） ──
+            independent_effects: false,
+            text_stroke_width: 0,
+            text_shadow_color: "rgba(255, 255, 255, 0.8)", 
+            text_shadow_blur: 16,
+            text_shadow_x: 0, text_shadow_y: 0,
+
+            // 布局
+            auto_fit: true, auto_center_v: true,
+            padding_top: 20, padding_bottom: 20, padding_left: 50, padding_right: 50,
+            title_body_gap: 30, body_footer_gap: 0,
+            
+            anim_in_type: "none", anim_out_type: "none"
+        }
+    ],
+
+    "07-纯白经典衬线(无底)": [
+        {
+            type: "textcard",
+            x: 50, y: 150, w: 980, h: 0,
+            rotation: 0, opacity: 255,
+            start: 0, end: 9999,
+
+            title_text: "I'm Sorry You're Gonna\nCry, But You Have To\nRead This Now",
+            body_text: "Psalm 34:18 \"The LORD is near to them that are of a broken heart...\"\nWhen your heart breaks, He's holding every piece. When you cry, He counts every tear. When you feel unseen, remember-God sees you. You're not forgotten. Not overlooked. Not alone. It's not an accident you're reading this. Send it to a godly sister who needs the reminder: She's seen, She's loved. Always. Dear God, please open every door for the one who shares this and puts \"Amen\" to put the enemy to shame,",
+            footer_text: "",
+            fixed_text: false,
+
+            card_enabled: false,
+
+            title_font_family: "Georgia, Times New Roman, Playfair Display, serif",
+            title_fontsize: 76,
+            title_font_weight: 900,
+            title_bold: true, title_italic: false,
+            title_color: "#FFFFFF",
+            title_align: "center", title_valign: "top",
+            title_uppercase: false,
+            title_letter_spacing: 0, title_line_spacing: 12,
+            title_bg_enabled: false,
+
+            body_font_family: "Georgia, Times New Roman, Playfair Display, serif",
+            body_fontsize: 44,
+            body_font_weight: 700,
+            body_bold: true, body_italic: false,
+            body_color: "#FFFFFF",
+            body_align: "center", body_valign: "top",
+            body_uppercase: false,
+            body_letter_spacing: 0, body_line_spacing: 16,
+            body_bg_enabled: false,
+            
+            independent_effects: false,
+            text_stroke_width: 0,
+            text_shadow_color: "rgba(10, 17, 40, 0.8)", 
+            text_shadow_blur: 16,
+            text_shadow_x: 2, text_shadow_y: 2,
+
+            auto_fit: true, auto_center_v: true,
+            padding_top: 20, padding_bottom: 20, padding_left: 40, padding_right: 40,
+            title_body_gap: 40, body_footer_gap: 0,
+            
+            anim_in_type: "none", anim_out_type: "none"
+        }
+    ],
+
+    "08-橙标白字(夜间无底)": [
+        {
+            type: "textcard",
+            x: 80, y: 150, w: 920, h: 0,
+            rotation: 0, opacity: 255,
+            start: 0, end: 9999,
+
+            title_text: "PRAY THIS MIRACLE\nPRAYER 3 TIMES",
+            body_text: "Dear God,\nthank You that You hear my prayer. I ask for miracles in my family, my finances, my health, and my nation. Let Your power move and let every promise You made come alive in my life. Put Amen three times, then share with 3 people.\nEvery share is a seed for blessings multiplied back to you.",
+            footer_text: "",
+            fixed_text: false,
+
+            card_enabled: false,
+
+            title_font_family: "Roboto, Helvetica, Arial, sans-serif",
+            title_fontsize: 66,
+            title_font_weight: 400,
+            title_bold: false, title_italic: false,
+            title_color: "#E67E22",
+            title_align: "center", title_valign: "top",
+            title_uppercase: true,
+            title_letter_spacing: 2, title_line_spacing: 12,
+            title_bg_enabled: false,
+
+            body_font_family: "Roboto, Helvetica, Arial, sans-serif",
+            body_fontsize: 46,
+            body_font_weight: 400,
+            body_bold: false, body_italic: false,
+            body_color: "#FFFFFF",
+            body_align: "center", body_valign: "top",
+            body_uppercase: false,
+            body_letter_spacing: 1, body_line_spacing: 20,
+            body_bg_enabled: false,
+            
+            independent_effects: false,
+            text_stroke_width: 0,
+            text_shadow_color: "rgba(10, 17, 40, 0.8)", 
+            text_shadow_blur: 16,
+            text_shadow_x: 0, text_shadow_y: 0,
+
+            auto_fit: true, auto_center_v: true,
+            padding_top: 20, padding_bottom: 20, padding_left: 40, padding_right: 40,
+            title_body_gap: 50, body_footer_gap: 0,
+            
+            anim_in_type: "none", anim_out_type: "none"
+        }
+    ],
+
+    "09-深褐玻璃卡片(经典衬线)": [
+        {
+            type: "textcard",
+            x: 80, y: 150, w: 920, h: 0,
+            rotation: 0, opacity: 255,
+            start: 0, end: 9999,
+
+            title_text: "ISAIAH 40:31",
+            body_text: "\"But they that wait on the LORD shall renew their strength. \" If God is making you wait, then wait. God is trying to show you something. God knows when you are ready for it. Have faith in His timing. Trust God. Everything will work out in the right way, at the right time. Dear God, uplift the one who keeps believing and places a steady Amen.",
+            footer_text: "",
+            fixed_text: false,
+
+            // 开启大卡片底色
+            card_enabled: true,
+            card_color: "#2C1B10",
+            card_opacity: 65,
+            radius_tl: 20, radius_tr: 20, radius_bl: 20, radius_br: 20,
+
+            title_font_family: "Georgia, Times New Roman, Playfair Display, serif",
+            title_fontsize: 76,
+            title_font_weight: 900,
+            title_bold: true, title_italic: false,
+            title_color: "#FFFFFF",
+            title_align: "center", title_valign: "top",
+            title_uppercase: true,
+            title_letter_spacing: 0, title_line_spacing: 10,
+            title_bg_enabled: false,
+
+            body_font_family: "Georgia, Times New Roman, Playfair Display, serif",
+            body_fontsize: 48,
+            body_font_weight: 400,
+            body_bold: false, body_italic: false,
+            body_color: "#FFFFFF",
+            body_align: "center", body_valign: "top",
+            body_uppercase: false,
+            body_letter_spacing: 0, body_line_spacing: 16,
+            body_bg_enabled: false,
+            
+            independent_effects: false,
+            text_stroke_width: 0, text_shadow_blur: 0,
+
+            auto_fit: true, auto_center_v: true,
+            padding_top: 40, padding_bottom: 40, padding_left: 40, padding_right: 40,
+            title_body_gap: 30, body_footer_gap: 0,
+            
+            anim_in_type: "none", anim_out_type: "none"
+        }
+    ],
+
+    "10-黄标+行内白底深褐正文(葡语)": [
+        {
+            type: "textcard",
+            x: 50, y: 150, w: 980, h: 0,
+            rotation: 0, opacity: 255,
+            start: 0, end: 9999,
+
+            title_text: "Oração poderosa que\ntraz proteção para os\nfilhos",
+            body_text: "Senhor, hoje quero rezar pelos meus filhos. Não sei o que acontecerá amanhã, mas acredito que Tu já estás diante deles, guiando cada passo. Peço-Te que, quando ele estiver fraco, lhe concedas força; quando estiver perdido, lhe mostres a direção; quando estiver cansado, lhe concedas descanso. Que os anjos da guarda o rodeiem a todo momento, para que ele sinta o amor e a proteção presentes em todo lugar. Se você ama seus filhos, Amém! E também permita que seus filhos vejam esta oração.",
+            footer_text: "Amém!",
+            fixed_text: false,
+
+            card_enabled: false,
+
+            // ── 标题：黄底黑字 ──
+            title_font_family: "Impact, Oswald, sans-serif",
+            title_fontsize: 70,
+            title_font_weight: 900,
+            title_bold: true, title_italic: false,
+            title_color: "#2B1B10",
+            title_align: "center", title_valign: "top",
+            title_uppercase: false,
+            title_letter_spacing: -1, title_line_spacing: 12,
+
+            title_bg_enabled: true,
+            title_bg_mode: "block",
+            title_bg_color: "#FFCC00",
+            title_bg_opacity: 100,
+            title_bg_radius: 12,
+            title_bg_pad_h: 30, title_bg_pad_top: 15, title_bg_pad_bottom: 15,
+
+            // ── 正文：白底黑字行内连体 ──
+            body_font_family: "Montserrat, Arial, sans-serif",
+            body_fontsize: 42,
+            body_font_weight: 700,
+            body_bold: true, body_italic: false,
+            body_color: "#2B1B10",
+            body_align: "center", body_valign: "top",
+            body_uppercase: false,
+            body_letter_spacing: 0, body_line_spacing: 10,
+
+            body_bg_enabled: true,
+            body_bg_mode: "inline-joined",
+            body_bg_color: "#FFFFFF",
+            body_bg_opacity: 100,
+            body_bg_radius: 20,
+            body_bg_pad_h: 24, body_bg_pad_top: 10, body_bg_pad_bottom: 10,
+            
+            // ── 结尾 ──
+            footer_font_family: "Montserrat, Impact, sans-serif",
+            footer_fontsize: 90,
+            footer_font_weight: 900,
+            footer_bold: true, footer_italic: false,
+            footer_color: "#9B30FF", // 紫色字模拟图片里底部紫色带艺术字的 Amem
+            footer_align: "center", footer_valign: "top",
+            footer_uppercase: false,
+            footer_letter_spacing: 0, footer_line_spacing: 10,
+            footer_bg_enabled: false,
+
+            independent_effects: true,
+            text_stroke_width: 0, text_shadow_blur: 0,
+
+            auto_fit: true, auto_center_v: true,
+            padding_top: 20, padding_bottom: 20, padding_left: 40, padding_right: 40,
+            title_body_gap: 40, body_footer_gap: 50,
+            
+            anim_in_type: "none", anim_out_type: "none"
+        }
+    ],
+
+    "11-红标标题+深褐正文(无底)": [
+        {
+            type: "textcard",
+            x: 60, y: 150, w: 960, h: 0,
+            rotation: 0, opacity: 255,
+            start: 0, end: 9999,
+
+            title_text: "SHORT PRAYER",
+            body_text: "Dear Lord, please forgive me. I am not perfect; I am a sinner. Sometimes I forget to pray, at times I lose my temper. I know You see every little thing I do. But thank You for always giving me another day to start anew. My Lord, please do not leave me; You are my everything. If God is important to you and if you love God and are not ashamed of Him, forward this and you will see what God will do and put a true Amen.",
+            footer_text: "",
+            fixed_text: false,
+
+            card_enabled: false,
+
+            title_font_family: "Georgia, Times New Roman, Playfair Display, serif",
+            title_fontsize: 76,
+            title_font_weight: 900,
+            title_bold: true, title_italic: false,
+            title_color: "#D32F2F",
+            title_align: "center", title_valign: "top",
+            title_uppercase: true,
+            title_letter_spacing: 0, title_line_spacing: 12,
+            title_bg_enabled: false,
+
+            body_font_family: "Georgia, Times New Roman, Playfair Display, serif",
+            body_fontsize: 40,
+            body_font_weight: 700,
+            body_bold: true, body_italic: false,
+            body_color: "#2B1B10",
+            body_align: "center", body_valign: "top",
+            body_uppercase: false,
+            body_letter_spacing: 0, body_line_spacing: 14,
+            body_bg_enabled: false,
+
+            independent_effects: false,
+            text_stroke_width: 0,
+            text_shadow_color: "rgba(255, 255, 255, 0.8)", 
+            text_shadow_blur: 16,
+
+            auto_fit: true, auto_center_v: true,
+            padding_top: 20, padding_bottom: 20, padding_left: 40, padding_right: 40,
+            title_body_gap: 30, body_footer_gap: 0,
+            
+            anim_in_type: "none", anim_out_type: "none"
+        }
+    ],
+
+    "12-绿标标题+深绿正文(无底)": [
+        {
+            type: "textcard",
+            x: 60, y: 150, w: 960, h: 0,
+            rotation: 0, opacity: 255,
+            start: 0, end: 9999,
+
+            title_text: "THE DEVIL WANTS YOU\nTO SKIP, BUT GOD\nWANTS YOU TO READ",
+            body_text: "Dear God, I love You, I promise to share this as a blessing to others. God is with you. God is for you. God sees you. God hears you. God knows you. God cares about you. God loves you. If you are not ashamed of God, don't forget 'Amen' and pass this to someone you care.",
+            footer_text: "",
+            fixed_text: false,
+
+            card_enabled: false,
+
+            title_font_family: "Impact, Oswald, sans-serif",
+            title_fontsize: 76,
+            title_font_weight: 900,
+            title_bold: true, title_italic: false,
+            title_color: "#388E3C",
+            title_align: "center", title_valign: "top",
+            title_uppercase: true,
+            title_letter_spacing: 0, title_line_spacing: 12,
+            title_bg_enabled: false,
+
+            body_font_family: "Georgia, Times New Roman, serif",
+            body_fontsize: 46,
+            body_font_weight: 700,
+            body_bold: true, body_italic: false,
+            body_color: "#1B2E1C",
+            body_align: "center", body_valign: "top",
+            body_uppercase: false,
+            body_letter_spacing: 0, body_line_spacing: 14,
+            body_bg_enabled: false,
+
+            independent_effects: false,
+            text_stroke_width: 0,
+            text_shadow_color: "rgba(255, 255, 255, 0.8)", 
+            text_shadow_blur: 16,
+
+            auto_fit: true, auto_center_v: true,
+            padding_top: 20, padding_bottom: 20, padding_left: 40, padding_right: 40,
+            title_body_gap: 30, body_footer_gap: 0,
+            
+            anim_in_type: "none", anim_out_type: "none"
+        }
+    ],
+
+    "13-白底半透大卡片(深褐字)": [
+        {
+            type: "textcard",
+            x: 60, y: 150, w: 960, h: 0,
+            rotation: 0, opacity: 255,
+            start: 0, end: 9999,
+
+            title_text: "TODAY'S\nPRAYER",
+            body_text: "Dear Heavenly Father,\nYou know how stressed I am today. You see my mind is cluttered with worries, fears, and tasks to accomplish. In these moments of overwhelming stress, please help me remember that I belong to You, and You are not the author of fear and anxiety. Remind me to come to You in these moments when the enemy would rather keep me away. Thank You for loving me through thick and thin, and giving Your shoulder to cast every burden on in every moment. I trust You and lay it all at Your feet. I love You, Lord and I promise to share this prayer with someone You loved and Amen.",
+            footer_text: "",
+            fixed_text: false,
+
+            // 开启大卡片底色
+            card_enabled: true,
+            card_color: "#FFFFFF",
+            card_opacity: 85,
+            radius_tl: 30, radius_tr: 30, radius_bl: 30, radius_br: 30,
+
+            title_font_family: "Georgia, Times New Roman, Playfair Display, serif",
+            title_fontsize: 66,
+            title_font_weight: 900,
+            title_bold: true, title_italic: false,
+            title_color: "#2B1B10",
+            title_align: "center", title_valign: "top",
+            title_uppercase: true,
+            title_letter_spacing: 0, title_line_spacing: 10,
+            title_bg_enabled: false,
+
+            body_font_family: "Georgia, Times New Roman, Playfair Display, serif",
+            body_fontsize: 40,
+            body_font_weight: 700,
+            body_bold: true, body_italic: false,
+            body_color: "#2B1B10",
+            body_align: "center", body_valign: "top",
+            body_uppercase: false,
+            body_letter_spacing: 0, body_line_spacing: 14,
+            body_bg_enabled: false,
+            
+            independent_effects: false,
+            text_stroke_width: 0, text_shadow_blur: 0,
+
+            auto_fit: true, auto_center_v: true,
+            padding_top: 40, padding_bottom: 40, padding_left: 40, padding_right: 40,
+            title_body_gap: 30, body_footer_gap: 0,
+            
+            anim_in_type: "none", anim_out_type: "none"
+        }
+    ],
+
+    "02-暗色蒙版左栏祈祷文": [
+        {
+            type: "textcard",
+            x: 118, y: 290, w: 780, h: 1330,
+            rotation: 0, opacity: 255,
+            start: 0, end: 9999,
+
+            // 全屏暗色蒙版，文字只占左侧窄栏
+            card_enabled: true,
+            card_color: "#0A1128", card_opacity: 62,
+            radius_tl: 0, radius_tr: 0, radius_bl: 0, radius_br: 0,
+            fullscreen_mask: true,
+
+            // 标题：白色衬线、全大写、紧凑左对齐
+            title_font_family: "Libre Caslon Text",
+            title_fontsize: 40,
+            title_font_weight: 700,
+            title_bold: true, title_italic: false,
+            title_color: "#FFFFFF",
+            title_align: "left", title_valign: "top",
+            title_uppercase: true,
+            title_letter_spacing: 0, title_line_spacing: -9,
+
+            // 正文：小号白色衬线体，密排行距
+            body_font_family: "Libre Caslon Text",
+            body_fontsize: 31,
+            body_font_weight: 400,
+            body_bold: false, body_italic: false,
+            body_color: "#FFFFFF",
+            body_align: "left", body_valign: "top",
+            body_letter_spacing: 0, body_line_spacing: -8,
+
+            // 结尾同正文，用于放署名或 CTA
+            footer_font_family: "Libre Caslon Text",
+            footer_fontsize: 29,
+            footer_font_weight: 400,
+            footer_bold: false, footer_italic: false,
+            footer_color: "#FFFFFF",
+            footer_align: "left", footer_valign: "top",
+            footer_letter_spacing: 0, footer_line_spacing: -7,
+
+            // 参考图没有明显描边、圆角和独立色块
+            independent_effects: false,
+            text_stroke_color: "#000000", text_stroke_width: 0,
+            text_shadow_color: "#2B1B10", text_shadow_blur: 1,
+            text_shadow_x: 0, text_shadow_y: 1,
+            title_bg_enabled: false,
+            body_bg_enabled: false,
+            footer_bg_enabled: false,
+
+            // 固定窄栏排版，长文案可通过面板微调字号/高度
+            auto_fit: false, auto_center_v: false,
+            padding_top: 0, padding_bottom: 0, padding_left: 0, padding_right: 0,
+            title_body_gap: 10, body_footer_gap: 10,
+            max_height: 1330, auto_shrink: true,
+            title_max_lines: 4, min_fontsize: 20,
+            offset_x: 0, offset_y: 0,
+
+            anim_in_type: "none", anim_out_type: "none",
+            anim_in_duration: 0, anim_out_duration: 0,
+        }
+    ],
+
+    "03-红字白框+深褐边祈祷清单": [
+        {
+            type: "textcard",
+            x: 84, y: 140, w: 780, h: 230,
+            rotation: 0, opacity: 255,
+            start: 0, end: 9999,
+
+            // 顶部白底标题牌
+            card_enabled: false,
+            card_color: "#FFFFFF", card_opacity: 0,
+            radius_tl: 0, radius_tr: 0, radius_bl: 0, radius_br: 0,
+            fullscreen_mask: false,
+
+            title_text: "LÉE LO EN SILENCIO\nDOS VECES",
+            fixed_text: true,
+            title_font_family: "Teko",
+            title_fontsize: 76,
+            title_font_weight: 700,
+            title_bold: true, title_italic: false,
+            title_color: "#FF2323",
+            title_align: "left", title_valign: "top",
+            title_uppercase: true,
+            title_letter_spacing: 1, title_line_spacing: -12,
+
+            body_text: "",
+            body_font_family: "Teko",
+            body_fontsize: 1,
+            body_font_weight: 400,
+            body_bold: false, body_italic: false,
+            body_color: "#FFFFFF",
+            body_align: "left", body_valign: "top",
+
+            footer_text: "",
+            footer_font_family: "Teko",
+            footer_fontsize: 1,
+            footer_font_weight: 400,
+            footer_bold: false, footer_italic: false,
+            footer_color: "#FFFFFF",
+            footer_align: "left", footer_valign: "top",
+
+            independent_effects: true,
+            text_stroke_color: "#000000", text_stroke_width: 0,
+            text_shadow_color: "#2B1B10", text_shadow_blur: 0,
+            text_shadow_x: 0, text_shadow_y: 0,
+
+            title_bg_enabled: true, title_bg_mode: "block",
+            title_bg_color: "#FFFFFF", title_bg_opacity: 96, title_bg_radius: 0,
+            title_bg_pad_h: 18, title_bg_pad_top: 12, title_bg_pad_bottom: 10,
+
+            body_bg_enabled: false,
+            footer_bg_enabled: false,
+
+            auto_fit: true, auto_center_v: false,
+            padding_top: 0, padding_bottom: 0, padding_left: 18, padding_right: 18,
+            title_body_gap: 0, body_footer_gap: 0,
+            max_height: 260, auto_shrink: false,
+            title_max_lines: 2, min_fontsize: 40,
+            offset_x: 0, offset_y: 0,
+
+            anim_in_type: "none", anim_out_type: "none",
+            anim_in_duration: 0, anim_out_duration: 0,
+        },
+        {
+            type: "textcard",
+            x: 92, y: 520, w: 850, h: 1040,
+            rotation: 0, opacity: 255,
+            start: 0, end: 9999,
+
+            // 正文直接压在背景上：白字、黑色粗描边、强阴影
+            card_enabled: false,
+            card_color: "#0A1128", card_opacity: 0,
+            radius_tl: 0, radius_tr: 0, radius_bl: 0, radius_br: 0,
+            fullscreen_mask: false,
+
+            title_font_family: "Teko",
+            title_fontsize: 68,
+            title_font_weight: 700,
+            title_bold: true, title_italic: false,
+            title_color: "#FFFFFF",
+            title_align: "left", title_valign: "top",
+            title_uppercase: false,
+            title_letter_spacing: 0, title_line_spacing: -7,
+
+            body_font_family: "Teko",
+            body_fontsize: 68,
+            body_font_weight: 700,
+            body_bold: true, body_italic: false,
+            body_color: "#FFFFFF",
+            body_align: "left", body_valign: "top",
+            body_letter_spacing: 0, body_line_spacing: -7,
+
+            footer_font_family: "Teko",
+            footer_fontsize: 62,
+            footer_font_weight: 700,
+            footer_bold: true, footer_italic: false,
+            footer_color: "#FFFFFF",
+            footer_align: "left", footer_valign: "top",
+            footer_letter_spacing: 0, footer_line_spacing: -7,
+
+            independent_effects: true,
+            title_stroke_color: "#2B1B10",
+            title_stroke_width: 8,
+            title_shadow_color: "#000000",
+            title_shadow_blur: 4,
+            title_shadow_x: 2,
+            title_shadow_y: 4,
+            body_stroke_color: "#2B1B10",
+            body_stroke_width: 8,
+            body_shadow_color: "#000000",
+            body_shadow_blur: 4,
+            body_shadow_x: 2,
+            body_shadow_y: 4,
+            footer_stroke_color: "#2B1B10",
+            footer_stroke_width: 8,
+            footer_shadow_color: "#000000",
+            footer_shadow_blur: 4,
+            footer_shadow_x: 2,
+            footer_shadow_y: 4,
+
+            title_bg_enabled: false,
+            body_bg_enabled: false,
+            footer_bg_enabled: false,
+
+            auto_fit: false, auto_center_v: false,
+            padding_top: 0, padding_bottom: 0, padding_left: 0, padding_right: 0,
+            title_body_gap: 4, body_footer_gap: 0,
+            max_height: 1040, auto_shrink: true,
+            title_max_lines: 1, min_fontsize: 38,
+            offset_x: 0, offset_y: 0,
+
+            anim_in_type: "none", anim_out_type: "none",
+            anim_in_duration: 0, anim_out_duration: 0,
+        }
+    ],
+};
+
+// 暴露到全局供面板读取
+window.REELS_BUILTIN_OVERLAY_GROUP_PRESETS = REELS_BUILTIN_OVERLAY_GROUP_PRESETS;
+
+function initBuiltinPresets() {
+    if (!window.ReelsStyleEngine) {
+        console.warn('[PresetsInit] ReelsStyleEngine 未加载，预设初始化跳过');
+        return;
+    }
+    // REELS_BUILTIN_PRESETS 现在通过 window.REELS_BUILTIN_PRESETS 在 loadSubtitlePresets 中内存合并
+    // 无需写入 localStorage，避免 Windows file:// 下 localStorage 不稳定的问题
+    const data = ReelsStyleEngine.loadSubtitlePresets();
+    const count = Object.keys(data.presets || {}).length;
+    console.log(`[PresetsInit] 预设加载完成: ${count} 个预设 (内置+用户)`);
+    if (typeof _reelsRefreshPresetList === 'function') {
+        _reelsRefreshPresetList();
+    }
+}
+
+/**
+ * 初始化内置覆层组预设 — 仅添加不存在的预设，不覆盖用户自定义
+ */
+function initBuiltinOverlayGroupPresets() {
+    const STORAGE_KEY = 'reels_overlay_group_presets';
+    let existing = {};
+    try {
+        existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    } catch (e) { existing = {}; }
+
+    // 清理此前曾作为内置预设自动写入的【爆款-XX】预设缓存，保证软件默认不自带，交由用户通过预设文件自由导入
+    let cleaned = 0;
+    if (!localStorage.getItem('reels_viral_presets_cleaned_v1')) {
+        for (const key of Object.keys(existing)) {
+            if (key.startsWith('【爆款-')) {
+                delete existing[key];
+                cleaned++;
+            }
+        }
+        try { localStorage.setItem('reels_viral_presets_cleaned_v1', '1'); } catch (_) { }
+    }
+
+    // 清理此前曾作为内置预设自动写入的【画笔水彩】与【自适应紧贴】预设缓存，保证软件默认不自带，交由用户通过预设文件自由导入
+    if (!localStorage.getItem('reels_brush_adaptive_builtin_cleaned_v1')) {
+        for (const key of Object.keys(existing)) {
+            if (key.startsWith('【画笔水彩】') || key.startsWith('【自适应紧贴】')) {
+                delete existing[key];
+                cleaned++;
+            }
+        }
+        try { localStorage.setItem('reels_brush_adaptive_builtin_cleaned_v1', '1'); } catch (_) { }
+    }
+
+    let updated = 0;
+    for (const [name, layers] of Object.entries(REELS_BUILTIN_OVERLAY_GROUP_PRESETS)) {
+        // 始终覆盖同名内置预设，确保用户获取最新更新
+        existing[name] = layers;
+        updated++;
+    }
+
+    if (updated > 0 || cleaned > 0) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+        console.log(`[PresetsInit] 已更新 ${updated} 个内置覆层组预设${cleaned > 0 ? ` (已清理 ${cleaned} 个历史残留爆款预设)` : ''}`);
+    }
+}
+
+// 自动初始化
+window.addEventListener('DOMContentLoaded', () => {
+    setTimeout(initBuiltinPresets, 500);
+    setTimeout(initBuiltinOverlayGroupPresets, 600);
+});

@@ -1,0 +1,549 @@
+const { contextBridge, ipcRenderer, webUtils, webFrame, clipboard } = require('electron');
+
+// 预设过去只在 Chromium localStorage 中保存；重打包后只要页面 origin 改变，
+// 那套数据库就可能不可见。启动时同步从 userData/videokit-presets 恢复，随后
+// 定期镜像回文件。只收集预设/模板相关键，绝不触碰 API Key 等设置。
+const _persistentPresetKey = (key) => /(?:preset|template|watermark|brush)/i.test(String(key || ''));
+const _readPersistentPresetValues = () => {
+    const values = {};
+    try {
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && _persistentPresetKey(key)) values[key] = localStorage.getItem(key);
+        }
+    } catch (_) { }
+    return values;
+};
+try {
+    const response = ipcRenderer.sendSync('persistent-presets:hydrate', _readPersistentPresetValues());
+    if (response?.ok) {
+        for (const [key, value] of Object.entries(response.values || {})) localStorage.setItem(key, value);
+    }
+} catch (_) { /* The main process may not have registered during an abnormal early startup. */ }
+let _persistentPresetLast = '';
+const _savePersistentPresets = () => {
+    const values = _readPersistentPresetValues();
+    const serialised = JSON.stringify(values);
+    if (serialised === _persistentPresetLast) return;
+    _persistentPresetLast = serialised;
+    ipcRenderer.invoke('persistent-presets:save', values).catch(() => {});
+};
+setInterval(_savePersistentPresets, 2000);
+window.addEventListener('beforeunload', _savePersistentPresets);
+
+// File objects passed through contextBridge can lose the identity required by
+// webUtils.getPathForFile().  Capture paths in the preload world while handling
+// the original drop event, then let the renderer consume that one drop's paths.
+// This is especially important for the batch Reels table, which must persist
+// absolute paths instead of only file names.
+let _lastDroppedFilePaths = [];
+window.addEventListener('drop', (event) => {
+    try {
+        _lastDroppedFilePaths = Array.from(event.dataTransfer?.files || [])
+            .map((file) => webUtils.getPathForFile(file))
+            .filter(Boolean);
+    } catch (error) {
+        _lastDroppedFilePaths = [];
+        console.warn('[preload] unable to capture dropped file paths:', error?.message);
+    }
+}, true);
+const fs = require('fs');
+const path = require('path');
+const { pathToFileURL, fileURLToPath } = require('url');
+
+function resolveAssetUrl(fileName) {
+    if (!fileName) return '';
+
+    const candidates = [];
+    if (typeof process.resourcesPath === 'string' && process.resourcesPath) {
+        candidates.push(path.join(process.resourcesPath, 'assets', fileName));
+    }
+    candidates.push(path.join(__dirname, '..', 'assets', fileName));
+    candidates.push(path.join(__dirname, '..', 'dist', 'assets', fileName));
+
+    for (const p of candidates) {
+        try {
+            if (fs.existsSync(p)) {
+                return toFileUrl(p);
+            }
+        } catch { }
+    }
+    return '';
+}
+
+function toFileUrl(filePath) {
+    if (!filePath || typeof filePath !== 'string') return '';
+    if (/^(https?|data|blob):/i.test(filePath)) return filePath;
+    try {
+        let nativePath = filePath;
+        let suffix = '';
+        const hashIdx = nativePath.indexOf('#');
+        if (hashIdx !== -1) {
+            suffix = nativePath.slice(hashIdx);
+            nativePath = nativePath.slice(0, hashIdx);
+        }
+        if (/^local-media:\/\//i.test(nativePath)) {
+            nativePath = fileURLToPath(nativePath.replace(/^local-media:/i, 'file:'));
+        } else if (/^file:\/\//i.test(nativePath)) {
+            nativePath = fileURLToPath(nativePath);
+        }
+        // Node 自带的 URL 转换会正确处理 Windows 盘符、UNC、中文、空格和 #/%。
+        return pathToFileURL(nativePath).href.replace(/^file:/i, 'local-media:') + suffix;
+    } catch (_) {
+        return filePath;
+    }
+}
+
+function localMediaUrlToPath(value) {
+    if (!value || typeof value !== 'string') return value;
+    try {
+        if (/^local-media:\/\//i.test(value)) return fileURLToPath(value.replace(/^local-media:/i, 'file:'));
+        if (/^file:\/\//i.test(value)) return fileURLToPath(value);
+    } catch (_) { }
+    return value;
+}
+
+function fileExists(filePath) {
+    if (!filePath || typeof filePath !== 'string') return false;
+    let p = filePath.trim();
+    if (!p || /^blob:|^data:|^https?:/i.test(p)) return true;
+    p = localMediaUrlToPath(p);
+    try {
+        const resolved = path.resolve(p);
+        return fs.existsSync(resolved);
+    } catch {
+        return false;
+    }
+}
+
+// 暴露 API 给渲染进程
+const _autoSaveDir = path.join(require('os').homedir(), '.videokit');
+const _autoSavePath = path.join(_autoSaveDir, 'autosave.json');
+try { if (!fs.existsSync(_autoSaveDir)) fs.mkdirSync(_autoSaveDir, { recursive: true }); } catch (_) {}
+
+const _reelsFramePipelineRequests = new Map();
+const _reelsFramePipelines = new Map();
+ipcRenderer.on('reels-frame-pipeline-ready', (event, data = {}) => {
+    const pending = _reelsFramePipelineRequests.get(data.requestId);
+    if (!pending) return;
+    _reelsFramePipelineRequests.delete(data.requestId);
+    clearTimeout(pending.timer);
+    const port = event.ports && event.ports[0];
+    if (data.ok && port) {
+        const pipelineId = data.requestId;
+        const pipeline = { port, pending: new Map() };
+        port.onmessage = (portEvent) => {
+            const ack = portEvent.data || {};
+            if (ack.type !== 'ack') return;
+            const waiter = pipeline.pending.get(ack.seq);
+            if (!waiter) return;
+            pipeline.pending.delete(ack.seq);
+            if (ack.ok) waiter.resolve(ack);
+            else waiter.reject(new Error(ack.error || '帧流水线写入失败'));
+        };
+        port.start && port.start();
+        _reelsFramePipelines.set(pipelineId, pipeline);
+        pending.resolve(pipelineId);
+    } else pending.reject(new Error(data.error || '无法建立帧流水线'));
+});
+
+const safeOpenPath = async (targetPath) => {
+    try {
+        return await ipcRenderer.invoke('open-path', targetPath);
+    } catch (err) {
+        if (err?.message?.includes('No handler registered')) {
+            return await ipcRenderer.invoke('show-item-in-folder', targetPath);
+        }
+        throw err;
+    }
+};
+
+const safeOpenExternal = async (url) => {
+    try {
+        return await ipcRenderer.invoke('open-external', url);
+    } catch (err) {
+        if (err?.message?.includes('No handler registered')) {
+            return await ipcRenderer.invoke('open-external-url', url);
+        }
+        throw err;
+    }
+};
+
+const localFilesBridge = {
+    pickFolder: async (options) => {
+        try {
+            return await ipcRenderer.invoke('local:pick-folder', options);
+        } catch (err) {
+            if (err?.message?.includes('No handler registered')) {
+                console.warn('[Preload] Fallback: local:pick-folder not registered, calling select-directory');
+                return options?.multi
+                    ? await ipcRenderer.invoke('select-directories')
+                    : await ipcRenderer.invoke('select-directory');
+            }
+            throw err;
+        }
+    },
+    pickImage: async () => {
+        try {
+            return await ipcRenderer.invoke('local:pick-image');
+        } catch (err) {
+            if (err?.message?.includes('No handler registered')) {
+                const files = await ipcRenderer.invoke('select-files', {
+                    title: '选择分类预览图',
+                    multiple: false,
+                    filters: [{ name: '图片', extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'] }]
+                });
+                return files?.[0] || null;
+            }
+            throw err;
+        }
+    },
+    getSubfolders: (folderPath) => ipcRenderer.invoke('local:get-subfolders', folderPath),
+    listDirectory: async (folderPath, options) => {
+        try {
+            return await ipcRenderer.invoke('local:list-directory', folderPath, options);
+        } catch (err) {
+            if (err?.message?.includes('No handler registered')) {
+                console.warn('[Preload] Fallback: local:list-directory not registered, calling scan-directory');
+                const files = await ipcRenderer.invoke('scan-directory', folderPath);
+                return {
+                    success: Boolean(files),
+                    exists: Boolean(files),
+                    items: (files || []).map(f => ({
+                        name: f.name,
+                        path: f.path,
+                        isDirectory: Boolean(f.isDirectory),
+                        size: f.size || 0,
+                        modifiedTime: new Date(f.mtime || Date.now()).toISOString()
+                    }))
+                };
+            }
+            throw err;
+        }
+    },
+    scanFolder: (folderPath, options) => ipcRenderer.invoke('local:scan-folder', folderPath, options),
+    getFolderAvatarMedia: (folderPath) => ipcRenderer.invoke('local:get-folder-avatar-media', folderPath),
+    getVideoThumbnail: (filePath, size) => ipcRenderer.invoke('local:video-thumbnail', filePath, size),
+    getLocalThumbnail: (filePath) => ipcRenderer.invoke('local:thumbnail', filePath),
+    flattenFolder: (folderPath) => ipcRenderer.invoke('local:flatten-folder', folderPath),
+    copyToFolder: (filePath, targetDir, options) => ipcRenderer.invoke('local:copy-to-folder', filePath, targetDir, options),
+    moveToFolder: (filePath, targetDir, options) => ipcRenderer.invoke('local:move-to-folder', filePath, targetDir, options),
+    removeDuplicates: (filePaths) => ipcRenderer.invoke('local:remove-duplicates', filePaths),
+    findDuplicates: (filePaths) => ipcRenderer.invoke('local:find-duplicates', filePaths),
+    trashFiles: (filePaths) => ipcRenderer.invoke('local:trash-files', filePaths),
+    copyToClipboard: (filePaths) => ipcRenderer.invoke('local:copy-to-clipboard', filePaths),
+    createFolder: (parentDir, folderName) => ipcRenderer.invoke('local:create-folder', parentDir, folderName),
+    moveFolderToFolder: (srcDir, targetDir, options) => ipcRenderer.invoke('local:move-folder-to-folder', srcDir, targetDir, options),
+    copyFolderToFolder: (srcDir, targetDir, options) => ipcRenderer.invoke('local:copy-folder-to-folder', srcDir, targetDir, options),
+    mergeMaterialFolders: (targetRoot, sources, options) => ipcRenderer.invoke('local:merge-material-folders', targetRoot, sources, options),
+    exportPreset: (jsonStr) => ipcRenderer.invoke('local:export-preset', jsonStr),
+    importPreset: () => ipcRenderer.invoke('local:import-preset'),
+    importPresetsMulti: () => ipcRenderer.invoke('local:import-presets-multi'),
+    exportWorkspaceConfig: (jsonStr) => ipcRenderer.invoke('local:export-workspace-config', jsonStr),
+    importWorkspaceConfig: () => ipcRenderer.invoke('local:import-workspace-config'),
+    watchFolders: (folders) => ipcRenderer.invoke('local:watch-folders', folders),
+    validateFolders: (folders) => ipcRenderer.invoke('local:validate-folders', folders),
+    onScanProgress: (callback) => {
+        ipcRenderer.removeAllListeners('local:scan-progress');
+        ipcRenderer.on('local:scan-progress', (_event, data) => callback?.(data));
+    },
+    onFolderRenamed: (callback) => {
+        ipcRenderer.removeAllListeners('local:folder-renamed');
+        ipcRenderer.on('local:folder-renamed', (_event, data) => callback?.(data));
+    },
+    onFolderMissing: (callback) => {
+        ipcRenderer.removeAllListeners('local:folder-missing');
+        ipcRenderer.on('local:folder-missing', (_event, data) => callback?.(data));
+    }
+};
+
+contextBridge.exposeInMainWorld('electronAPI', {
+    // 平台信息
+    platform: process.platform,
+    autoSavePath: _autoSavePath,
+    resolveAssetUrl,
+    toFileUrl,
+    fileExists,
+    // 获取 File 对象的本地完整路径（contextIsolation 下 File.path 不可用）
+    getFilePath: (file) => {
+        try {
+            const p = webUtils.getPathForFile(file);
+            console.log('[preload.getFilePath] success:', p);
+            return p;
+        } catch (e) {
+            console.error('[preload.getFilePath] FAILED:', e.message, 'file:', typeof file, file?.name);
+            return '';
+        }
+    },
+    consumeDroppedFilePaths: () => {
+        const paths = _lastDroppedFilePaths;
+        _lastDroppedFilePaths = [];
+        return paths;
+    },
+    isDirectory: (filePath) => {
+        try {
+            return fs.existsSync(filePath) && fs.statSync(filePath).isDirectory();
+        } catch {
+            return false;
+        }
+    },
+    fsExists: (p) => {
+        try { return fs.existsSync(p); } catch { return false; }
+    },
+    fsStat: (p) => {
+        try {
+            const s = fs.statSync(p);
+            return {
+                size: s.size,
+                mtimeMs: s.mtimeMs,
+                isDirectory: s.isDirectory(),
+                isFile: s.isFile()
+            };
+        } catch {
+            return null;
+        }
+    },
+    fsReaddir: (p) => {
+        try {
+            return fs.readdirSync(p, { withFileTypes: true }).map(e => ({
+                name: e.name,
+                isDirectory: e.isDirectory(),
+                isFile: e.isFile()
+            }));
+        } catch {
+            return [];
+        }
+    },
+    pathJoin: (...args) => path.join(...args),
+    pathBasename: (p) => path.basename(p),
+    pathDirname: (p) => path.dirname(p),
+    getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+    exportOverlayPresetPackage: (presets) => ipcRenderer.invoke('export-overlay-preset-package', presets),
+    importOverlayPresetPackage: (packagePath) => ipcRenderer.invoke('import-overlay-preset-package', packagePath),
+    saveOverlayPresetAssets: (preset) => ipcRenderer.invoke('save-overlay-preset-assets', preset),
+    writeClipboardText: (text) => {
+        clipboard.writeText(String(text || ''));
+        return true;
+    },
+    writeClipboardImage: (filePath) => {
+        try {
+            const { nativeImage } = require('electron');
+            const cleanPath = localMediaUrlToPath(filePath);
+            const img = nativeImage.createFromPath(cleanPath);
+            if (!img || img.isEmpty()) return false;
+            clipboard.writeImage(img);
+            return true;
+        } catch (e) {
+            console.error('writeClipboardImage error:', e);
+            return false;
+        }
+    },
+
+    // 选择目录
+    selectDirectory: () => ipcRenderer.invoke('select-directory'),
+    selectDirectories: () => ipcRenderer.invoke('select-directories'),
+    selectFiles: (options) => ipcRenderer.invoke('select-files', options),
+    saveFile: (options) => ipcRenderer.invoke('save-file', options),
+
+    scanDirectory: (dirPath) => ipcRenderer.invoke('scan-directory', dirPath),
+    // 本地多窗口整理与文件分拣能力
+    localFiles: localFilesBridge,
+    scanDirectoryRecursive: (dirPath, options) => ipcRenderer.invoke('scan-directory-recursive', dirPath, options),
+    searchFilesRecursive: (searchDir, fileNames, maxDepth) => ipcRenderer.invoke('search-files-recursive', searchDir, fileNames, maxDepth),
+    checkFilesExist: (filePaths) => ipcRenderer.invoke('check-files-exist', filePaths),
+    getDownloadsPath: () => ipcRenderer.invoke('get-downloads-path'),
+
+    // 批量Reels - 烧录字幕
+    burnSubtitles: (opts) => ipcRenderer.invoke('burn-subtitles', opts),
+    reelsCompose: (opts) => ipcRenderer.invoke('reels-compose', opts),
+    concatVideo: (opts) => ipcRenderer.invoke('concat-video', opts),
+    reelsComposeWysiwyg: (action, data) => ipcRenderer.invoke('reels-compose-wysiwyg', action, data),
+    reelsDetectSilence: (data) => ipcRenderer.invoke('reels-detect-silence', data),
+    collectReelsProjectAssets: (data) => ipcRenderer.invoke('collect-reels-project-assets', data),
+    copyReelsProjectPackage: (data) => ipcRenderer.invoke('copy-reels-project-package', data),
+    createReelsFramePipeline: (sessionId) => new Promise((resolve, reject) => {
+        const requestId = `reels-pipe-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const timer = setTimeout(() => {
+            _reelsFramePipelineRequests.delete(requestId);
+            reject(new Error('建立帧流水线超时'));
+        }, 8000);
+        _reelsFramePipelineRequests.set(requestId, { resolve, reject, timer });
+        ipcRenderer.send('reels-frame-pipeline-open', { sessionId, requestId });
+    }),
+    sendReelsFramePipeline: (pipelineId, seq, raw) => new Promise((resolve, reject) => {
+        const pipeline = _reelsFramePipelines.get(pipelineId);
+        if (!pipeline) { reject(new Error('帧流水线不存在或已关闭')); return; }
+        pipeline.pending.set(seq, { resolve, reject });
+        try { pipeline.port.postMessage({ type: 'frame', seq, raw }, [raw]); }
+        catch (err) { pipeline.pending.delete(seq); reject(err); }
+    }),
+    closeReelsFramePipeline: (pipelineId) => {
+        const pipeline = _reelsFramePipelines.get(pipelineId);
+        if (!pipeline) return;
+        _reelsFramePipelines.delete(pipelineId);
+        try { pipeline.port.close(); } catch (_) { }
+    },
+    getMediaDuration: (filePath) => {
+        if (!filePath || typeof filePath !== 'string') return 0;
+        const cleanPath = localMediaUrlToPath(filePath);
+        return ipcRenderer.invoke('get-media-duration', cleanPath);
+    },
+    getMediaDurationDetail: (filePath) => {
+        if (!filePath || typeof filePath !== 'string') {
+            return Promise.resolve({ ok: false, duration: null, code: 'EMPTY_PATH', reason: '文件路径为空' });
+        }
+        return ipcRenderer.invoke('get-media-duration-detail', localMediaUrlToPath(filePath));
+    },
+    saveRenderedAudio: (wavData) => ipcRenderer.invoke('save-rendered-audio', wavData),
+    readFileBuffer: (filePath) => ipcRenderer.invoke('read-file-buffer', filePath),
+    // 分层 PNG 序列导出
+    savePngFrame: (opts) => ipcRenderer.invoke('save-png-frame', opts),
+    exportAudioMp3: (opts) => ipcRenderer.invoke('export-audio-mp3', opts),
+    ensureDirectory: (dirPath) => ipcRenderer.invoke('ensure-directory', dirPath),
+
+    // V3 并行影子窗口导出
+    parallelWysiwygExport: (opts) => ipcRenderer.invoke('parallel-wysiwyg-export', opts),
+    onParallelProgress: (callback) => {
+        const handler = (_, data) => callback(data);
+        ipcRenderer.on('parallel-export-progress', handler);
+        return () => ipcRenderer.removeListener('parallel-export-progress', handler);
+    },
+    isolatedWysiwygExport: (opts) => ipcRenderer.invoke('isolated-wysiwyg-export', opts),
+    cancelIsolatedWysiwygExport: (requestId) => ipcRenderer.send('cancel-isolated-wysiwyg-export', requestId),
+    getLatestCrashDiagnostic: () => ipcRenderer.invoke('get-latest-crash-diagnostic'),
+    onReelsCrashDiagnostic: (callback) => {
+        const handler = (_, data) => callback(data);
+        ipcRenderer.on('reels-crash-diagnostic', handler);
+        return () => ipcRenderer.removeListener('reels-crash-diagnostic', handler);
+    },
+    onIsolatedWysiwygProgress: (requestId, callback) => {
+        const handler = (_, data) => {
+            if (data && data.requestId === requestId) callback(data);
+        };
+        ipcRenderer.on('isolated-wysiwyg-progress', handler);
+        return () => ipcRenderer.removeListener('isolated-wysiwyg-progress', handler);
+    },
+
+    // 自动更新
+    checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+    downloadUpdate: () => ipcRenderer.invoke('download-update'),
+    installUpdate: () => ipcRenderer.invoke('install-update'),
+    getUpdateChannel: () => ipcRenderer.invoke('get-update-channel'),
+    setUpdateChannel: (channel) => ipcRenderer.invoke('set-update-channel', channel),
+    onUpdateStatus: (callback) => {
+        const handler = (_, data) => callback(data);
+        ipcRenderer.on('update-status', handler);
+        return () => ipcRenderer.removeListener('update-status', handler);
+    },
+
+    // 扫描本地字体
+    scanFonts: () => ipcRenderer.invoke('scan-fonts'),
+    fetchGoogleFonts: () => ipcRenderer.invoke('fetch-google-fonts'),
+
+    // 读取文件内容
+    readFileText: (filePath) => {
+        try { return fs.readFileSync(filePath, 'utf-8'); } catch { return ''; }
+    },
+
+    // 写入文件内容 (用于保存工程)
+    writeFileText: (filePath, content) => {
+        try { fs.writeFileSync(filePath, content, 'utf-8'); return true; } catch (e) { console.error('Write File Error:', e); return false; }
+    },
+
+    // ==================== 统一 API 调用接口 ====================
+    // 替代 fetch(`${API_BASE}/endpoint`, ...) 的调用方式
+    // 用法: const result = await window.electronAPI.apiCall('elevenlabs/voices', { key_index: 0 })
+    apiCall: (endpoint, data) => ipcRenderer.invoke('api-call', endpoint, data),
+    onElevenLabsWebAuthStatus: (callback) => {
+        const handler = (_event, data) => callback(data);
+        ipcRenderer.on('elevenlabs-web-auth-status', handler);
+        return () => ipcRenderer.removeListener('elevenlabs-web-auth-status', handler);
+    },
+
+    // 文件上传专用接口
+    // 用法: const result = await window.electronAPI.apiUpload('upload', fileArrayBuffer, fileName, { extra: 'data' })
+    apiUpload: (endpoint, fileBuffer, fileName, formData) =>
+        ipcRenderer.invoke('api-upload', endpoint, fileBuffer, fileName, formData),
+
+    // Wav2Lip 进度事件监听
+    onWav2LipProgress: (callback) => {
+        ipcRenderer.on('wav2lip-progress', (event, data) => callback(data));
+    },
+
+    // 批量下载进度事件监听
+    onBatchDownloadProgress: (callback) => {
+        ipcRenderer.on('batch-download-progress', (event, data) => callback(data));
+    },
+
+    // 链接截图进度事件监听
+    onUrlThumbnailProgress: (callback) => {
+        ipcRenderer.on('url-thumbnail-progress', (event, data) => callback(event, data));
+    },
+
+    onAutoEditProgress: (callback) => {
+        const handler = (event, data) => callback(data);
+        ipcRenderer.on('auto-edit-progress', handler);
+        return () => ipcRenderer.removeListener('auto-edit-progress', handler);
+    },
+
+    onAutoEditArchiveProgress: (callback) => {
+        const handler = (event, data) => callback(data);
+        ipcRenderer.on('autoedit-archive-progress', handler);
+        return () => ipcRenderer.removeListener('autoedit-archive-progress', handler);
+    },
+
+    onSubtitleProgress: (callback) => {
+        const handler = (_event, data) => callback(data);
+        ipcRenderer.on('subtitle-progress', handler);
+        return () => ipcRenderer.removeListener('subtitle-progress', handler);
+    },
+
+    // 在 Finder/Explorer 中高亮显示文件
+    showItemInFolder: (filePath) => {
+        ipcRenderer.invoke('show-item-in-folder', filePath).catch(() => {});
+    },
+
+    // 用系统默认浏览器打开链接
+    openExternal: (url) => {
+        ipcRenderer.invoke('open-external-url', url).catch(() => {});
+    },
+
+    // 缓存管理
+    getCacheInfo: () => ipcRenderer.invoke('get-cache-info'),
+    clearCache: () => ipcRenderer.invoke('clear-cache'),
+    openCacheFolder: () => ipcRenderer.invoke('open-cache-folder'),
+    setCachePath: (newPath) => ipcRenderer.invoke('set-cache-path', newPath),
+
+    // 界面缩放（使用 Electron 原生 webFrame，正确处理布局视口）
+    setZoomFactor: (factor) => webFrame.setZoomFactor(factor),
+    getZoomFactor: () => webFrame.getZoomFactor(),
+
+
+    // 屏幕取色器（解决 Windows 吸管无法吸取窗口外颜色）
+    screenPickColor: () => ipcRenderer.invoke('screen-pick-color'),
+
+    // 模板多窗口
+    openTemplateWindow: (templateId, templateName) => ipcRenderer.invoke('open-template-window', templateId, templateName),
+});
+
+// 兼容 ITEN 原生桥接层 bridge 对象
+contextBridge.exposeInMainWorld('bridge', {
+    toFileUrl,
+    getPathForFile: (file) => {
+        try {
+            return webUtils.getPathForFile(file) || '';
+        } catch (_) {
+            return file?.path || '';
+        }
+    },
+    openPath: safeOpenPath,
+    openExternal: safeOpenExternal,
+    renameLocalFiles: (payload) => ipcRenderer.invoke('files:rename-local', payload),
+    on: (channel, listener) => {
+        const handler = (_event, ...args) => listener(...args);
+        ipcRenderer.on(channel, handler);
+        return () => ipcRenderer.removeListener(channel, handler);
+    },
+    removeListener: (channel, listener) => ipcRenderer.removeListener(channel, listener),
+    localFiles: localFilesBridge
+});

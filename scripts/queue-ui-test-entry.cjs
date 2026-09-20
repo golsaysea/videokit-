@@ -1,0 +1,11 @@
+const { app } = require('electron');
+const path = require('path');
+app.setPath('userData', process.env.VIDEOKIT_TEST_PROFILE);
+app.setPath('downloads', process.env.VIDEOKIT_TEST_PROFILE);
+const settings = require('../electron/services/settings');
+let config = {primary:'gladia',concurrency:1,providers:{groq:{keys:[]},gladia:{keys:[]},deepgram:{keys:[]}}};
+settings.loadTranscriptionProviders=()=>config;
+settings.getPublicTranscriptionProviders=()=>({...config,providers:Object.fromEntries(Object.entries(config.providers).map(([name,p])=>[name,{editableKeys:p.keys,keyCount:p.keys.length}]))});
+settings.saveTranscriptionProviders=input=>{config.primary=input.primary;for(const name of ['groq','gladia','deepgram'])if(input[name+'_keys'])config.providers[name].keys=input[name+'_keys'];return {success:true};};
+settings.loadGladiaKeys=()=>({keys:[]});
+require('../electron/main');

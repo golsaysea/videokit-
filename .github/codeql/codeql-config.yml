@@ -1,0 +1,18 @@
+name: "pyMediaTools CodeQL Config"
+
+# Exclude third-party / vendored code and build artifacts
+paths-ignore:
+  - vendor
+  - dist-electron
+  - dist
+  - node_modules
+  - '**/*.min.js'
+
+# Disable queries that produce false positives for this project's architecture:
+# - js/file-access-to-http: This project intentionally sends file data (audio/text)
+#   to cloud APIs (ElevenLabs TTS, Gladia transcription) as its core functionality.
+query-filters:
+  - exclude:
+      id: js/file-access-to-http
+  - exclude:
+      id: js/disabling-electron-websecurity
