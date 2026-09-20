@@ -1,7 +1,7 @@
 {
   "sourceFiles": 116,
   "coveredFiles": 26,
-  "addedFiles": 90,
+  "addedFiles": 84,
   "families": [
     "Archivo",
     "Bodoni Moda",
@@ -16,8 +16,6 @@
     "Merriweather",
     "Montserrat",
     "Noto Sans",
-    "Noto Sans SC",
-    "Noto Serif SC",
     "Nunito",
     "Open Sans",
     "Pacifico",
@@ -27,8 +25,6 @@
     "Raleway",
     "Rubik",
     "SourceCodeVF",
-    "Source Han Sans SC",
-    "Source Han Serif SC",
     "SourceSans3VF",
     "Source Serif 4 Variable",
     "TikTok Sans",
@@ -199,22 +195,6 @@
       "sha256": "bfb7bb691513f12e734dc346c03a03f784912432d7e3fa8e56efcf906fe86b3d"
     },
     {
-      "family": "Noto Sans SC",
-      "style": "Thin",
-      "weight": "100 900",
-      "source": "fonts\\open\\notosanssc\\NotoSansSC[wght].ttf",
-      "target": "VideoKit-main\\assets\\fonts\\Noto Sans SC\\NotoSansSC-VariableFont-wght-Regular.ttf",
-      "sha256": "a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da"
-    },
-    {
-      "family": "Noto Serif SC",
-      "style": "ExtraLight",
-      "weight": "200 900",
-      "source": "fonts\\open\\notoserifsc\\NotoSerifSC[wght].ttf",
-      "target": "VideoKit-main\\assets\\fonts\\Noto Serif SC\\NotoSerifSC-VariableFont-wght-Regular.ttf",
-      "sha256": "050080d9255a86808f2945bffac582b31ef32bc36411ce29563b4961670c66f9"
-    },
-    {
       "family": "Nunito",
       "style": "ExtraLight",
       "weight": "200 1000",
@@ -293,38 +273,6 @@
       "source": "fonts\\open\\sourcecodepro\\SourceCodeVF-Upright.ttf",
       "target": "VideoKit-main\\assets\\fonts\\SourceCodeVF\\SourceCodeVF-VariableFont-wght-Regular.ttf",
       "sha256": "c4066e584e995ec317a072f1777742861d3ce0bf210096b84450a249d0210198"
-    },
-    {
-      "family": "Source Han Sans SC",
-      "style": "Bold",
-      "weight": "700",
-      "source": "fonts\\open\\sourcehansanssc\\SourceHanSansSC-Bold.otf",
-      "target": "VideoKit-main\\assets\\fonts\\Source Han Sans SC\\SourceHanSansSC-Bold.otf",
-      "sha256": "df2b90f5bcc6d01dfc964cec5f6d535d6b6aebd26ed7fd79a9c1b3f2112fcb6b"
-    },
-    {
-      "family": "Source Han Sans SC",
-      "style": "Regular",
-      "weight": "400",
-      "source": "fonts\\open\\sourcehansanssc\\SourceHanSansSC-Regular.otf",
-      "target": "VideoKit-main\\assets\\fonts\\Source Han Sans SC\\SourceHanSansSC-Regular.otf",
-      "sha256": "f1d8611151880c6c336aabeac4640ef434fa13cbfbf1ffe82d0a71b2a5637256"
-    },
-    {
-      "family": "Source Han Serif SC",
-      "style": "Bold",
-      "weight": "700",
-      "source": "fonts\\open\\sourcehanserifsc\\SourceHanSerifSC-Bold.otf",
-      "target": "VideoKit-main\\assets\\fonts\\Source Han Serif SC\\SourceHanSerifSC-Bold.otf",
-      "sha256": "706b8c0de2deff6cbc0c87e2cdedfd33a78b7ffd76cebb4549012f197ba611fe"
-    },
-    {
-      "family": "Source Han Serif SC",
-      "style": "Regular",
-      "weight": "400",
-      "source": "fonts\\open\\sourcehanserifsc\\SourceHanSerifSC-Regular.otf",
-      "target": "VideoKit-main\\assets\\fonts\\Source Han Serif SC\\SourceHanSerifSC-Regular.otf",
-      "sha256": "78aa7a328fd974df2d688c8a9fd74a33d8334dfa84ab24d9d11efb2ffc464117"
     },
     {
       "family": "SourceSans3VF",
@@ -806,5 +754,11 @@
       "target": "VideoKit-main\\fonts-local\\Valentine Cupcake\\ValentineCupcake-Regular.ttf",
       "sha256": "2a7ea2477947750ae65a103340636d80e5fc26ecc456061d5be39fa45f8944a0"
     }
+  ],
+  "excludedFamilies": [
+    "Noto Sans SC",
+    "Noto Serif SC",
+    "Source Han Sans SC",
+    "Source Han Serif SC"
   ]
 }
